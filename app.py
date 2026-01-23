@@ -1,3 +1,7 @@
+# use deployed app.py on HF space "Chest_Scan_Diagnosis"
+# https://huggingface.co/spaces/irajkoohi/ChestScanDiagnosis?logs=build
+
+
 import gradio as gr
 from transformers import pipeline
 import torch
@@ -9,8 +13,7 @@ import os
 # Get HF token from environment
 hf_token = os.environ.get("HF_TOKEN")
 
-# Load model
-@gr.cache_if(lambda: True)
+# Load model function
 def load_model():
     model_dir = Path("./models/medgemma-1.5-4b-it")
     
@@ -23,7 +26,9 @@ def load_model():
     
     if model_exists:
         model_path = str(model_dir)
+        print(f"Loading model from {model_path}")
     else:
+        print("Downloading model from Hugging Face Hub...")
         model_dir.parent.mkdir(exist_ok=True)
         model_path = snapshot_download(
             repo_id="google/medgemma-1.5-4b-it",
@@ -31,8 +36,10 @@ def load_model():
             local_dir_use_symlinks=False,
             token=hf_token,
         )
+        print(f"Model downloaded to {model_path}")
     
     # Load pipeline
+    print("Loading pipeline...")
     pipe = pipeline(
         "image-text-to-text",
         model=model_path,
@@ -40,9 +47,12 @@ def load_model():
         device="cuda" if torch.cuda.is_available() else "cpu",
         token=hf_token,
     )
+    print(f"Model loaded successfully on {pipe.device}")
     
     return pipe
 
+# Load model on startup
+print("Initializing model...")
 pipe = load_model()
 
 def analyze_medical_image(image, question, max_tokens=500):
