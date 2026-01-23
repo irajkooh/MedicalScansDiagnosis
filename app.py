@@ -110,17 +110,15 @@ with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
         with gr.Column():
             output = gr.Textbox(label="Analysis Result", lines=15)
     
-    # Examples
-    gr.Examples(
-        examples=[
-            ["Describe this chest X-ray. What do you see?"],
-            ["Are there any signs of pneumonia, cardiomegaly, or pleural effusion? Provide a detailed analysis."],
-            ["Identify and describe the location of the heart, lungs, and any abnormalities."],
-            ["What is the overall quality of this medical image?"],
-            ["Describe any pathological findings in this scan."],
-        ],
-        inputs=question_input,
-    )
+    # Example questions
+    gr.Markdown("""
+    **Example questions:**
+    - Describe this chest X-ray. What do you see?
+    - Are there any signs of pneumonia, cardiomegaly, or pleural effusion?
+    - Identify and describe the location of the heart, lungs, and any abnormalities.
+    - What is the overall quality of this medical image?
+    - Describe any pathological findings in this scan.
+    """)
     
     analyze_btn.click(
         fn=analyze_medical_image,
@@ -146,4 +144,8 @@ with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
     """)
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        share=False
+    )
