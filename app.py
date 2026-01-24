@@ -123,8 +123,9 @@ demo = gr.Interface(
     - What is the overall quality of this medical image?
     - Describe any pathological findings in this scan.
     """,
-    theme="default"
+    theme="default",
+    share=True
 )
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch()
