@@ -120,11 +120,8 @@ demo = gr.Interface(
     }
     ```
     """,
-    examples=[
-        [None, "Describe this chest X-ray. What do you see?"],
-        [None, "Are there any signs of pneumonia, cardiomegaly, or pleural effusion?"],
-    ],
-    theme="default"
+    theme="default",
+    cache_examples=False
 )
 
 if __name__ == "__main__":
