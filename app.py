@@ -115,14 +115,17 @@ demo = gr.Interface(
     - 3D: CT scans, MRI scans (volumetric data)
     
     ⚠️ **Important:** This is for research purposes only. Not for clinical diagnosis.
-    
-    **Example questions:**
-    - Describe this chest X-ray. What do you see?
-    - Are there any signs of pneumonia, cardiomegaly, or pleural effusion?
-    - Identify and describe the location of the heart, lungs, and any abnormalities.
-    - What is the overall quality of this medical image?
-    - Describe any pathological findings in this scan.
-    """
+    """,
+    examples=[
+        [None, "Describe this chest X-ray. What do you see?"],
+        [None, "Are there any signs of pneumonia, cardiomegaly, or pleural effusion?"],
+        [None, "Identify and describe the location of the heart, lungs, and any abnormalities."],
+        [None, "What is the overall quality of this medical image?"],
+        [None, "Describe any pathological findings in this scan."],
+        [None, "Is this a normal or abnormal scan?"],
+        [None, "What anatomical structures are visible in this image?"]
+    ],
+    cache_examples=False
 )
 
 if __name__ == "__main__":
