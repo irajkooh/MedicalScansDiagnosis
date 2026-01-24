@@ -67,33 +67,46 @@ def load_model():
 print("Initializing model...")
 pipe = load_model()
 
-def analyze_medical_image(image, question, progress=gr.Progress()):
-    """Analyze medical image with custom question"""
+def analyze_medical_image(image, question, history, progress=gr.Progress()):
+    """Analyze medical image with custom question and conversation history"""
     if image is None:
-        return "Please upload an image first."
+        return "Please upload an image first.", history, ""
+    
+    start_time = time.time()
     
     progress(0.1, desc="🔍 Step 1/10: Starting analysis...")
     
     progress(0.2, desc="📷 Step 2/10: Loading medical image...")
     
-    # Create messages
+    # Create messages with conversation history
     progress(0.3, desc="📝 Step 3/10: Preparing prompt...")
-    messages = [
-        {
+    messages = []
+    
+    # Add conversation history
+    for prev_q, prev_a in history:
+        messages.append({
             "role": "user",
-            "content": [
-                {"type": "image", "image": image},
-                {"type": "text", "text": question}
-            ]
-        }
-    ]
+            "content": [{"type": "text", "text": prev_q}]
+        })
+        messages.append({
+            "role": "assistant",
+            "content": [{"type": "text", "text": prev_a}]
+        })
+    
+    # Add current question with image
+    messages.append({
+        "role": "user",
+        "content": [
+            {"type": "image", "image": image},
+            {"type": "text", "text": question}
+        ]
+    })
     
     progress(0.4, desc="🤖 Step 4/10: Initializing AI model...")
     
     progress(0.5, desc="🧠 Step 5/10: Processing with MedGemma AI...")
     
-    # Run inference with streaming to update progress
-    # Note: Pipeline doesn't support true streaming, but we can update progress after
+    # Run inference
     try:
         output = pipe(text=messages, max_new_tokens=500)
         
@@ -103,12 +116,36 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
         
         progress(0.8, desc="📋 Step 8/10: Formatting output...")
         progress(0.9, desc="✨ Step 9/10: Finalizing report...")
-        progress(1.0, desc="✅ Step 10/10: Complete!")
         
-        return result
+        # Calculate total time
+        total_time = time.time() - start_time
+        
+        progress(1.0, desc=f"✅ Step 10/10: Complete! ({total_time:.1f}s)")
+        
+        # Update history
+        new_history = history + [[question, result]]
+        
+        # Build full output with all conversations
+        full_output = ""
+        for i, (q, a) in enumerate(new_history, 1):
+            full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*80}\n\n"
+        
+        # Add total processing time at the end
+        full_output += f"\n{'─'*80}\nTotal Processing Time: {total_time:.1f}s"
+        
+        # Format for copy: all conversations
+        copy_text = full_output.strip()
+        
+        return full_output.strip(), new_history, copy_text
     except Exception as e:
-        progress(1.0, desc="❌ Error occurred")
-        return f"Error during analysis: {str(e)}"
+        total_time = time.time() - start_time
+        progress(1.0, desc=f"❌ Error occurred ({total_time:.1f}s)")
+        error_msg = f"Error during analysis: {str(e)}"
+        return error_msg, history, f"Question: {question}\n\nAnswer: {error_msg}"
+
+def clear_history():
+    """Clear conversation history, image, and output"""
+    return None, "", [], ""
 
 # Create Gradio interface with Blocks for custom copy button
 with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
@@ -123,6 +160,10 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     ⚠️ **Important:** This is for research purposes only. Not for clinical diagnosis.
     """)
     
+    # Hidden state for conversation history
+    history_state = gr.State([])
+    copy_state = gr.State("")
+    
     with gr.Row():
         with gr.Column():
             image_input = gr.Image(type="pil", label="Upload Medical Image")
@@ -132,7 +173,9 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 value="Describe this medical image. What do you see?",
                 lines=3
             )
-            submit_btn = gr.Button("Analyze", variant="primary")
+            with gr.Row():
+                submit_btn = gr.Button("Analyze", variant="primary")
+                clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
             output_text = gr.Textbox(label="Analysis Result", lines=15)
@@ -159,14 +202,21 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     # Connect the analyze button
     submit_btn.click(
         fn=analyze_medical_image,
-        inputs=[image_input, question_input],
-        outputs=output_text,
+        inputs=[image_input, question_input, history_state],
+        outputs=[output_text, history_state, copy_state],
         show_progress="full",
         concurrency_limit=10
     )
     
-    # Copy button functionality (copies to clipboard via JavaScript)
-    copy_btn.click(None, output_text, None, js="(x) => {navigator.clipboard.writeText(x); return x;}")
+    # Clear button functionality
+    clear_btn.click(
+        fn=clear_history,
+        inputs=[],
+        outputs=[image_input, output_text, history_state, copy_state]
+    )
+    
+    # Copy button functionality (copies question + answer to clipboard via JavaScript)
+    copy_btn.click(None, copy_state, None, js="(x) => {navigator.clipboard.writeText(x); return x;}")
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
