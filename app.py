@@ -131,17 +131,22 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     ]
     
     # Update progress every 0.2 seconds for smoother animation
-    # Linear progress with fixed estimated time shown to user
+    # Dynamic total time estimation based on actual processing speed
     while not result_container["done"]:
         elapsed = time.time() - start_time
         
-        # Linear progress relative to estimated time
-        progress_pct = elapsed / estimated_total_time
-        
-        # If we exceed estimate, slow down progress growth but keep moving
-        if progress_pct > 0.9:
-            # Beyond 90%, progress slows down but keeps advancing
-            progress_pct = 0.9 + (progress_pct - 0.9) * 0.1
+        # Dynamically estimate total time based on how fast we're progressing
+        # Start with initial estimate, then adjust based on actual speed
+        if elapsed < 10:
+            # First 10 seconds: use initial estimate
+            estimated_total = estimated_total_time
+            progress_pct = elapsed / estimated_total
+        else:
+            # After 10 seconds: estimate based on actual progress
+            # Assume we're making steady progress toward completion
+            # Conservative estimate: assume current speed continues and we're 70% done
+            estimated_total = elapsed / 0.7
+            progress_pct = 0.7
         
         # Cap at 95% until actually done
         progress_pct = min(progress_pct, 0.95)
@@ -149,8 +154,8 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         step_index = int(progress_pct * 10)
         step_index = min(step_index, 9)  # Max step 10 (index 9)
         
-        # Format time display with elapsed/fixed estimate
-        desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total_time:.0f}s"
+        # Format time display with elapsed/dynamically estimated total
+        desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s"
         progress(progress_pct, desc=desc)
         time.sleep(0.2)  # Update 5 times per second for smooth progress
     
