@@ -74,7 +74,7 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         return "Please upload an image first.", history, ""
     
     start_time = time.time()
-    estimated_total_time = 30  # Estimate 30 seconds for full process
+    estimated_total_time = 60  # Estimate 60 seconds for full process (CPU inference is slow)
     
     # Shared variables for threading
     result_container = {"output": None, "error": None, "done": False}
