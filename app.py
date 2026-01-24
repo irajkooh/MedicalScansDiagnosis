@@ -105,21 +105,6 @@ demo = gr.Interface(
     - What is the overall quality of this medical image?
     - Describe any pathological findings in this scan.
     """,
-    article="""
-    ### 📚 Resources
-    - [Model on HuggingFace](https://huggingface.co/google/medgemma-1.5-4b-it)
-    - [Research Blog](https://research.google/blog/next-generation-medical-image-interpretation-with-medgemma-15-and-medical-speech-to-text-with-medasr/)
-    
-    **Citation:**
-    ```
-    @article{sellergren2025medgemma,
-      title={MedGemma Technical Report},
-      author={Sellergren et al.},
-      journal={arXiv preprint arXiv:2507.05201},
-      year={2025}
-    }
-    ```
-    """,
     theme="default"
 )
 
