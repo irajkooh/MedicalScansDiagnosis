@@ -13,6 +13,17 @@ import os
 # Get HF token from environment
 hf_token = os.environ.get("HF_TOKEN")
 
+if not hf_token:
+    raise ValueError(
+        "HF_TOKEN environment variable not found!\n"
+        "Please add your Hugging Face token as a secret in Space settings:\n"
+        "1. Go to Settings tab\n"
+        "2. Navigate to 'Variables and secrets'\n"
+        "3. Add HF_TOKEN with your token value from https://huggingface.co/settings/tokens"
+    )
+
+print(f"✓ HF_TOKEN found (length: {len(hf_token)})")
+
 # Load model function
 def load_model():
     model_dir = Path("./models/medgemma-1.5-4b-it")
