@@ -158,9 +158,9 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s"
         progress(progress_pct, desc=desc)
         
-        # Update the output textbox with processing status showing step, time, percentage, and total time at bottom
+        # Update the output textbox with processing status showing step, time, percentage, and estimated total at bottom
         percentage = progress_pct * 100
-        status_text = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s - {percentage:.1f}%\n\n{'─'*80}\nTotal Processing Time: {elapsed:.1f}s"
+        status_text = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s - {percentage:.1f}%\n\n{'─'*80}\nElapsed: {elapsed:.1f}s  |  Estimated Total: ~{estimated_total:.0f}s"
         yield status_text, history, ""
         
         time.sleep(0.2)  # Update 5 times per second for smooth progress
