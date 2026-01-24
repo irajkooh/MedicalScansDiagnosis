@@ -130,15 +130,15 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         "✅ Step 10/10: Complete!"
     ]
     
-    # Update progress every 0.5 seconds
+    # Update progress every 0.2 seconds for smoother animation
     while not result_container["done"]:
         elapsed = time.time() - start_time
-        progress_pct = min(0.9, elapsed / estimated_total_time)  # Cap at 90% until done
+        progress_pct = min(0.95, elapsed / estimated_total_time)  # Cap at 95% until done
         step_index = int(progress_pct * 10)
-        step_index = min(step_index, 8)  # Max step 9 (index 8) until complete
+        step_index = min(step_index, 9)  # Max step 10 (index 9)
         
         progress(progress_pct, desc=step_descriptions[step_index])
-        time.sleep(0.5)
+        time.sleep(0.2)  # Update 5 times per second for smooth progress
     
     # Wait for thread to complete
     inference_thread.join()
