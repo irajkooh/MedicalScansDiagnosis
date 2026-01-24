@@ -122,10 +122,8 @@ demo = gr.Interface(
     - Identify and describe the location of the heart, lungs, and any abnormalities.
     - What is the overall quality of this medical image?
     - Describe any pathological findings in this scan.
-    """,
-    theme="default",
-    share=True
+    """
 )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(share=True)
