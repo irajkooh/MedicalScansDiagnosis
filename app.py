@@ -120,8 +120,7 @@ demo = gr.Interface(
     }
     ```
     """,
-    theme="default",
-    cache_examples=False
+    theme="default"
 )
 
 if __name__ == "__main__":
