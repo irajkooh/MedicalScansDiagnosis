@@ -95,21 +95,10 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
     
     return output[0]["generated_text"][-1]["content"]
 
-# Create Gradio interface using simpler Interface API
-demo = gr.Interface(
-    fn=analyze_medical_image,
-    inputs=[
-        gr.Image(type="pil", label="Upload Medical Image"),
-        gr.Textbox(
-            label="Ask a Question",
-            placeholder="e.g., Describe this chest X-ray. What do you see?",
-            value="Describe this medical image. What do you see?",
-            lines=3
-        )
-    ],
-    outputs=gr.Textbox(label="Analysis Result", lines=15),
-    title="🏥 MedGemma 1.5: Medical Image Analysis",
-    description="""
+# Create Gradio interface with Blocks for custom copy button
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+    gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
+    gr.Markdown("""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
     
     **Supported imaging types:**
@@ -117,18 +106,47 @@ demo = gr.Interface(
     - 3D: CT scans, MRI scans (volumetric data)
     
     ⚠️ **Important:** This is for research purposes only. Not for clinical diagnosis.
-    """,
-    examples=[
-        [None, "Describe this chest X-ray. What do you see?"],
-        [None, "Are there any signs of pneumonia, cardiomegaly, or pleural effusion?"],
-        [None, "Identify and describe the location of the heart, lungs, and any abnormalities."],
-        [None, "What is the overall quality of this medical image?"],
-        [None, "Describe any pathological findings in this scan."],
-        [None, "Is this a normal or abnormal scan?"],
-        [None, "What anatomical structures are visible in this image?"]
-    ],
-    cache_examples=False
-)
+    """)
+    
+    with gr.Row():
+        with gr.Column():
+            image_input = gr.Image(type="pil", label="Upload Medical Image")
+            question_input = gr.Textbox(
+                label="Ask a Question",
+                placeholder="e.g., Describe this chest X-ray. What do you see?",
+                value="Describe this medical image. What do you see?",
+                lines=3
+            )
+            submit_btn = gr.Button("Analyze", variant="primary")
+        
+        with gr.Column():
+            output_text = gr.Textbox(label="Analysis Result", lines=15)
+            copy_btn = gr.Button("📋 Copy Results", size="sm")
+    
+    # Examples section
+    gr.Examples(
+        examples=[
+            [None, "Describe this chest X-ray. What do you see?"],
+            [None, "Are there any signs of pneumonia, cardiomegaly, or pleural effusion?"],
+            [None, "Identify and describe the location of the heart, lungs, and any abnormalities."],
+            [None, "What is the overall quality of this medical image?"],
+            [None, "Describe any pathological findings in this scan."],
+            [None, "Is this a normal or abnormal scan?"],
+            [None, "What anatomical structures are visible in this image?"]
+        ],
+        inputs=[image_input, question_input],
+        cache_examples=False
+    )
+    
+    # Connect the analyze button
+    submit_btn.click(
+        fn=analyze_medical_image,
+        inputs=[image_input, question_input],
+        outputs=output_text
+    )
+    
+    # Copy button functionality (copies to clipboard via JavaScript)
+    copy_btn.click(None, output_text, None, js="(x) => {navigator.clipboard.writeText(x); return x;}")
 
 if __name__ == "__main__":
     demo.launch()
