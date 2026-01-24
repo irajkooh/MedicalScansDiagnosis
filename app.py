@@ -184,11 +184,11 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 lines=3
             )
             with gr.Row():
-                submit_btn = gr.Button("Analyze", variant="primary", interactive=True)
+                submit_btn = gr.Button("Analyze", variant="primary", interactive=False)
                 clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
-            output_text = gr.Textbox(label="Analysis Results", lines=23, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
+            output_text = gr.Textbox(label="Analysis Results", lines=24, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
             copy_btn = gr.Button("📋 Copy Results", size="sm", interactive=False)
     
     # Examples section
@@ -221,10 +221,21 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
         outputs=copy_btn
     )
     
-    # Enable/disable Analyze button based on question input
+    # Enable/disable Analyze button based on image and question input
+    def update_analyze_button(image, question):
+        has_image = image is not None
+        has_question = len(question.strip()) > 0 if question else False
+        return gr.update(interactive=has_image and has_question)
+    
     question_input.change(
-        fn=lambda x: gr.update(interactive=len(x.strip()) > 0),
-        inputs=question_input,
+        fn=update_analyze_button,
+        inputs=[image_input, question_input],
+        outputs=submit_btn
+    )
+    
+    image_input.change(
+        fn=update_analyze_button,
+        inputs=[image_input, question_input],
         outputs=submit_btn
     )
     
@@ -234,7 +245,7 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
         inputs=[],
         outputs=[image_input, output_text, history_state, copy_state]
     ).then(
-        fn=lambda: [gr.update(interactive=True), gr.update(interactive=False)],
+        fn=lambda: [gr.update(interactive=False), gr.update(interactive=False)],
         outputs=[submit_btn, copy_btn]
     )
     
