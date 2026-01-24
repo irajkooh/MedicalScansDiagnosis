@@ -55,10 +55,12 @@ def load_model():
 print("Initializing model...")
 pipe = load_model()
 
-def analyze_medical_image(image, question):
+def analyze_medical_image(image, question, progress=gr.Progress()):
     """Analyze medical image with custom question"""
     if image is None:
         return "Please upload an image first."
+    
+    progress(0, desc="Preparing image...")
     
     # Create messages
     messages = [
@@ -71,8 +73,13 @@ def analyze_medical_image(image, question):
         }
     ]
     
+    progress(0.3, desc="Processing with MedGemma model...")
+    
     # Run inference (fixed max_tokens)
     output = pipe(text=messages, max_new_tokens=500)
+    
+    progress(1.0, desc="Analysis complete!")
+    
     return output[0]["generated_text"][-1]["content"]
 
 # Create Gradio interface using simpler Interface API
