@@ -150,8 +150,8 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         step_index = int(progress_pct * 10)
         step_index = min(step_index, 9)  # Max step 10 (index 9)
         
-        # Format time display
-        desc = f"{step_names[step_index]} - {elapsed:.1f}s"
+        # Format time display with elapsed/total
+        desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total_time:.0f}s"
         progress(progress_pct, desc=desc)
         time.sleep(0.2)  # Update 5 times per second for smooth progress
     
@@ -162,7 +162,7 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     total_time = time.time() - start_time
     
     # Final progress update with total time
-    progress(1.0, desc=f"✅ Complete! - {total_time:.1f}s/{total_time:.1f}s")
+    progress(1.0, desc=f"✅ Complete! - {total_time:.0f}/{total_time:.0f}s")
     
     # Handle results
     if result_container["error"]:
