@@ -183,8 +183,21 @@ def clear_history():
     """Clear conversation history"""
     return [], ""
 
+# Custom CSS for green progress bar
+custom_css = """
+.progress-bar {
+    background-color: #10b981 !important;
+}
+.progress-container progress::-webkit-progress-value {
+    background-color: #10b981 !important;
+}
+.progress-container progress::-moz-progress-bar {
+    background-color: #10b981 !important;
+}
+"""
+
 # Create Gradio interface with Blocks for custom copy button
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css) as demo:
     gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
     gr.Markdown("""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
