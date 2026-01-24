@@ -55,7 +55,7 @@ def load_model():
 print("Initializing model...")
 pipe = load_model()
 
-def analyze_medical_image(image, question, max_tokens=500):
+def analyze_medical_image(image, question):
     """Analyze medical image with custom question"""
     if image is None:
         return "Please upload an image first."
@@ -71,15 +71,25 @@ def analyze_medical_image(image, question, max_tokens=500):
         }
     ]
     
-    # Run inference
-    output = pipe(text=messages, max_new_tokens=max_tokens)
+    # Run inference (fixed max_tokens)
+    output = pipe(text=messages, max_new_tokens=500)
     return output[0]["generated_text"][-1]["content"]
 
-# Create Gradio interface
-with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
-    gr.Markdown("""
-    # 🏥 MedGemma 1.5: Medical Image Analysis
-    
+# Create Gradio interface using simpler Interface API
+demo = gr.Interface(
+    fn=analyze_medical_image,
+    inputs=[
+        gr.Image(type="pil", label="Upload Medical Image"),
+        gr.Textbox(
+            label="Ask a Question",
+            placeholder="e.g., Describe this chest X-ray. What do you see?",
+            value="Describe this medical image. What do you see?",
+            lines=3
+        )
+    ],
+    outputs=gr.Textbox(label="Analysis Result", lines=15),
+    title="🏥 MedGemma 1.5: Medical Image Analysis",
+    description="""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
     
     **Supported imaging types:**
@@ -87,46 +97,15 @@ with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
     - 3D: CT scans, MRI scans (volumetric data)
     
     ⚠️ **Important:** This is for research purposes only. Not for clinical diagnosis.
-    """)
     
-    with gr.Row():
-        with gr.Column():
-            image_input = gr.Image(type="pil", label="Upload Medical Image")
-            question_input = gr.Textbox(
-                label="Ask a Question",
-                placeholder="e.g., Describe this chest X-ray. What do you see?",
-                value="Describe this medical image. What do you see?",
-                lines=3
-            )
-            max_tokens = gr.Number(
-                label="Max Response Length (tokens)",
-                value=500,
-                minimum=100,
-                maximum=1000
-            )
-            analyze_btn = gr.Button("🔍 Analyze Image", variant="primary")
-        
-        with gr.Column():
-            output = gr.Textbox(label="Analysis Result", lines=15)
-    
-    # Example questions
-    gr.Markdown("""
     **Example questions:**
     - Describe this chest X-ray. What do you see?
     - Are there any signs of pneumonia, cardiomegaly, or pleural effusion?
     - Identify and describe the location of the heart, lungs, and any abnormalities.
     - What is the overall quality of this medical image?
     - Describe any pathological findings in this scan.
-    """)
-    
-    analyze_btn.click(
-        fn=analyze_medical_image,
-        inputs=[image_input, question_input, max_tokens],
-        outputs=output
-    )
-    
-    gr.Markdown("""
-    ---
+    """,
+    article="""
     ### 📚 Resources
     - [Model on HuggingFace](https://huggingface.co/google/medgemma-1.5-4b-it)
     - [Research Blog](https://research.google/blog/next-generation-medical-image-interpretation-with-medgemma-15-and-medical-speech-to-text-with-medasr/)
@@ -140,7 +119,13 @@ with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
       year={2025}
     }
     ```
-    """)
+    """,
+    examples=[
+        [None, "Describe this chest X-ray. What do you see?"],
+        [None, "Are there any signs of pneumonia, cardiomegaly, or pleural effusion?"],
+    ],
+    theme="default"
+)
 
 if __name__ == "__main__":
     demo.launch()
