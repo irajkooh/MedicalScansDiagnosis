@@ -130,8 +130,8 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         for i, (q, a) in enumerate(new_history, 1):
             full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*80}\n\n"
         
-        # Add total processing time at the end
-        full_output += f"\n{'─'*80}\nTotal Processing Time: {total_time:.1f}s"
+        # Add total processing time at the end - make it prominent
+        full_output += f"\n{'='*80}\n⏱️  TOTAL PROCESSING TIME: {total_time:.1f} seconds\n{'='*80}"
         
         # Format for copy: all conversations
         copy_text = full_output.strip()
