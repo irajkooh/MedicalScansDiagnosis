@@ -11,18 +11,18 @@ from huggingface_hub import snapshot_download
 import os
 
 # Get HF token from environment
-hf_token = os.environ.get("HF_TOKEN")
+hf_token = os.environ.get("MedicalScans_token")
 
 if not hf_token:
     raise ValueError(
-        "HF_TOKEN environment variable not found!\n"
+        "MedicalScans_token environment variable not found!\n"
         "Please add your Hugging Face token as a secret in Space settings:\n"
         "1. Go to Settings tab\n"
         "2. Navigate to 'Variables and secrets'\n"
-        "3. Add HF_TOKEN with your token value from https://huggingface.co/settings/tokens"
+        "3. Add MedicalScans_token with your token value from https://huggingface.co/settings/tokens"
     )
 
-print(f"✓ HF_TOKEN found (length: {len(hf_token)})")
+print(f"✓ MedicalScans_token found (length: {len(hf_token)})")
 
 # Load model function
 def load_model():
