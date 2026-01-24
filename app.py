@@ -184,12 +184,12 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 lines=3
             )
             with gr.Row():
-                submit_btn = gr.Button("Analyze", variant="primary")
+                submit_btn = gr.Button("Analyze", variant="primary", interactive=True)
                 clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
-            output_text = gr.Textbox(label="Analysis Result", lines=22, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
-            copy_btn = gr.Button("📋 Copy Results", size="sm")
+            output_text = gr.Textbox(label="Analysis Results", lines=23, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
+            copy_btn = gr.Button("📋 Copy Results", size="sm", interactive=False)
     
     # Examples section
     gr.Examples(
@@ -216,6 +216,16 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
         outputs=[output_text, history_state, copy_state],
         show_progress="full",
         concurrency_limit=10
+    ).then(
+        fn=lambda: gr.update(interactive=True),
+        outputs=copy_btn
+    )
+    
+    # Enable/disable Analyze button based on question input
+    question_input.change(
+        fn=lambda x: gr.update(interactive=len(x.strip()) > 0),
+        inputs=question_input,
+        outputs=submit_btn
     )
     
     # Clear button functionality
@@ -223,6 +233,9 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
         fn=clear_history,
         inputs=[],
         outputs=[image_input, output_text, history_state, copy_state]
+    ).then(
+        fn=lambda: [gr.update(interactive=True), gr.update(interactive=False)],
+        outputs=[submit_btn, copy_btn]
     )
     
     # Copy button functionality (copies question + answer to clipboard via JavaScript)
