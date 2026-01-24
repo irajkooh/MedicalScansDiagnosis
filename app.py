@@ -131,9 +131,14 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     ]
     
     # Update progress every 0.2 seconds for smoother animation
+    # Use exponential approach: progress approaches 100% but never quite reaches it until done
     while not result_container["done"]:
         elapsed = time.time() - start_time
-        progress_pct = min(0.95, elapsed / estimated_total_time)  # Cap at 95% until done
+        # Exponential progress: fast at first, slows down as it approaches completion
+        # This ensures progress is always moving relative to actual time
+        progress_pct = 1 - (1 / (1 + elapsed / 10))  # Asymptotic to 1.0
+        progress_pct = min(progress_pct, 0.98)  # Cap at 98% until actually done
+        
         step_index = int(progress_pct * 10)
         step_index = min(step_index, 9)  # Max step 10 (index 9)
         
