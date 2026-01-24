@@ -107,7 +107,7 @@ demo = gr.Interface(
             lines=3
         )
     ],
-    outputs=gr.Textbox(label="Analysis Result", lines=15, show_copy_button=True),
+    outputs=gr.Textbox(label="Analysis Result", lines=15),
     title="🏥 MedGemma 1.5: Medical Image Analysis",
     description="""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
