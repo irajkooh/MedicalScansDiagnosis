@@ -188,7 +188,7 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
-            output_text = gr.Textbox(label="Analysis Result", lines=20, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
+            output_text = gr.Textbox(label="Analysis Result", lines=22, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
             copy_btn = gr.Button("📋 Copy Results", size="sm")
     
     # Examples section
