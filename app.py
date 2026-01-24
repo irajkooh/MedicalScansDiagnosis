@@ -128,10 +128,7 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         # Build full output with all conversations
         full_output = ""
         for i, (q, a) in enumerate(new_history, 1):
-            full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*80}\n\n"
-        
-        # Add total processing time at the end - make it prominent
-        full_output += f"\n{'='*80}\n⏱️  TOTAL PROCESSING TIME: {total_time:.1f} seconds\n{'='*80}"
+            full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*10}\n\n"
         
         # Format for copy: all conversations
         copy_text = full_output.strip()
@@ -146,6 +143,19 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
 def clear_history():
     """Clear conversation history, image, and output"""
     return None, "", [], ""
+
+# Custom CSS for green progress bar
+custom_css = """
+.progress-bar {
+    background-color: #10b981 !important;
+}
+.progress-container progress::-webkit-progress-value {
+    background-color: #10b981 !important;
+}
+.progress-container progress::-moz-progress-bar {
+    background-color: #10b981 !important;
+}
+"""
 
 # Create Gradio interface with Blocks for custom copy button
 with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
@@ -178,7 +188,7 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
-            output_text = gr.Textbox(label="Analysis Result", lines=15, max_lines=None, autoscroll=True)
+            output_text = gr.Textbox(label="Analysis Result", lines=25, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
             copy_btn = gr.Button("📋 Copy Results", size="sm")
     
     # Examples section
@@ -216,8 +226,28 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     )
     
     # Copy button functionality (copies question + answer to clipboard via JavaScript)
-    copy_btn.click(None, copy_state, None, js="(x) => {navigator.clipboard.writeText(x); return x;}")
+    copy_btn.click(
+        None, 
+        output_text, 
+        None, 
+        js="""
+        (x) => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(x);
+            } else {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = x;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+            return x;
+        }
+        """
+    )
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
-    demo.launch()
+    demo.launch(css=custom_css)
