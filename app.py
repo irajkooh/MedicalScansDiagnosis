@@ -72,11 +72,9 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
     if image is None:
         return "Please upload an image first."
     
-    progress(0.0, desc="🔍 Preparing image...")
-    time.sleep(0.2)
+    progress(0, desc="🧠 Analyzing with MedGemma AI...")
     
     # Create messages
-    progress(0.2, desc="📝 Formatting query...")
     messages = [
         {
             "role": "user",
@@ -86,17 +84,11 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
             ]
         }
     ]
-    time.sleep(0.1)
-    
-    progress(0.4, desc="🧠 Analyzing with MedGemma AI...")
     
     # Run inference (fixed max_tokens)
     output = pipe(text=messages, max_new_tokens=500)
     
-    progress(0.9, desc="✅ Finalizing results...")
-    time.sleep(0.1)
-    
-    progress(1.0, desc="✅ Complete!")
+    progress(1, desc="✅ Complete!")
     
     return output[0]["generated_text"][-1]["content"]
 
@@ -147,8 +139,7 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     submit_btn.click(
         fn=analyze_medical_image,
         inputs=[image_input, question_input],
-        outputs=output_text,
-        show_progress="full"
+        outputs=output_text
     )
     
     # Copy button functionality (copies to clipboard via JavaScript)
