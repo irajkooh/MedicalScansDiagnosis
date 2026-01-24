@@ -67,16 +67,17 @@ def load_model():
 print("Initializing model...")
 pipe = load_model()
 
-def analyze_medical_image(image, question, progress=gr.Progress()):
+def analyze_medical_image(image, question, progress=gr.Progress(track_tqdm=True)):
     """Analyze medical image with custom question"""
     if image is None:
         return "Please upload an image first."
     
-    progress(0.0, desc="🔍 Preparing image...")
-    time.sleep(0.2)
+    # Track progress through each step
+    for i in progress.tqdm(range(100), desc="🔍 Preparing image..."):
+        if i == 0:
+            break
     
     # Create messages
-    progress(0.2, desc="📝 Formatting query...")
     messages = [
         {
             "role": "user",
@@ -86,17 +87,12 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
             ]
         }
     ]
-    time.sleep(0.1)
     
-    progress(0.4, desc="🧠 Analyzing with MedGemma AI...")
-    
-    # Run inference (fixed max_tokens)
-    output = pipe(text=messages, max_new_tokens=500)
-    
-    progress(0.9, desc="✅ Finalizing results...")
-    time.sleep(0.1)
-    
-    progress(1.0, desc="✅ Complete!")
+    for i in progress.tqdm(range(100), desc="🧠 Analyzing with MedGemma AI..."):
+        if i == 0:
+            # Run inference (fixed max_tokens)
+            output = pipe(text=messages, max_new_tokens=500)
+            break
     
     return output[0]["generated_text"][-1]["content"]
 
