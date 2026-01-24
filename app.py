@@ -117,39 +117,52 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     inference_thread.start()
     
     # Update progress linearly based on time
-    step_descriptions = [
-        "🔍 Step 1/10: Starting analysis...",
-        "📷 Step 2/10: Loading medical image...",
-        "📝 Step 3/10: Preparing prompt...",
-        "🤖 Step 4/10: Initializing AI model...",
-        "🧠 Step 5/10: Processing with MedGemma AI...",
-        "🔬 Step 6/10: Analyzing results...",
-        "📊 Step 7/10: Extracting findings...",
-        "📋 Step 8/10: Formatting output...",
-        "✨ Step 9/10: Finalizing report...",
-        "✅ Step 10/10: Complete!"
+    step_names = [
+        "🔍 Starting analysis",
+        "📷 Loading medical image",
+        "📝 Preparing prompt",
+        "🤖 Initializing AI model",
+        "🧠 Processing with MedGemma AI",
+        "🔬 Analyzing results",
+        "📊 Extracting findings",
+        "📋 Formatting output",
+        "✨ Finalizing report",
+        "✅ Complete!"
     ]
     
     # Update progress every 0.2 seconds for smoother animation
-    # Use exponential approach: progress approaches 100% but never quite reaches it until done
+    # Linear progress based on estimated total time with dynamic adjustment
     while not result_container["done"]:
         elapsed = time.time() - start_time
-        # Exponential progress: fast at first, slows down as it approaches completion
-        # This ensures progress is always moving relative to actual time
-        progress_pct = 1 - (1 / (1 + elapsed / 10))  # Asymptotic to 1.0
-        progress_pct = min(progress_pct, 0.98)  # Cap at 98% until actually done
+        
+        # Linear progress relative to estimated time
+        progress_pct = elapsed / estimated_total_time
+        
+        # If we exceed estimate, dynamically adjust so progress keeps moving
+        if progress_pct > 0.95:
+            # Recalculate estimate assuming we're now at 95% done
+            estimated_total_time = elapsed / 0.95
+            progress_pct = 0.95
+        
+        # Cap at 98% until actually done
+        progress_pct = min(progress_pct, 0.98)
         
         step_index = int(progress_pct * 10)
         step_index = min(step_index, 9)  # Max step 10 (index 9)
         
-        progress(progress_pct, desc=step_descriptions[step_index])
+        # Format time display
+        desc = f"{step_names[step_index]} - {elapsed:.1f}s"
+        progress(progress_pct, desc=desc)
         time.sleep(0.2)  # Update 5 times per second for smooth progress
     
     # Wait for thread to complete
     inference_thread.join()
     
-    # Final progress update
-    progress(1.0, desc=step_descriptions[9])
+    # Calculate total time
+    total_time = time.time() - start_time
+    
+    # Final progress update with total time
+    progress(1.0, desc=f"✅ Complete! - {total_time:.1f}s/{total_time:.1f}s")
     
     # Handle results
     if result_container["error"]:
