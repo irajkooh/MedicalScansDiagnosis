@@ -157,6 +157,12 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         # Format time display with elapsed/dynamically estimated total
         desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s"
         progress(progress_pct, desc=desc)
+        
+        # Update the output textbox with processing status showing step, time, and percentage
+        percentage = progress_pct * 100
+        status_text = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s - {percentage:.1f}%"
+        yield status_text, history, ""
+        
         time.sleep(0.2)  # Update 5 times per second for smooth progress
     
     # Wait for thread to complete
@@ -187,10 +193,13 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     for i, (q, a) in enumerate(new_history, 1):
         full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*80}\n\n"
     
+    # Add total processing time at the end
+    full_output += f"\n{'─'*80}\nTotal Processing Time: {total_time:.1f}s"
+    
     # Format for copy: all conversations
     copy_text = full_output.strip()
     
-    return full_output.strip(), new_history, copy_text
+    yield full_output.strip(), new_history, copy_text
 
 def clear_history():
     """Clear conversation history, image, and output"""
