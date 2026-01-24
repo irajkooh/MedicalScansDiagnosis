@@ -87,12 +87,17 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
     
     progress(0.3, desc="🧠 Processing with MedGemma AI...")
     
-    # Run inference (fixed max_tokens)
-    output = pipe(text=messages, max_new_tokens=500)
-    
-    progress(1.0, desc="✅ Complete!")
-    
-    return output[0]["generated_text"][-1]["content"]
+    # Run inference with streaming to update progress
+    # Note: Pipeline doesn't support true streaming, but we can update progress after
+    try:
+        output = pipe(text=messages, max_new_tokens=500)
+        progress(0.9, desc="🧠 Finalizing results...")
+        result = output[0]["generated_text"][-1]["content"]
+        progress(1.0, desc="✅ Complete!")
+        return result
+    except Exception as e:
+        progress(1.0, desc="❌ Error occurred")
+        return f"Error during analysis: {str(e)}"
 
 # Create Gradio interface with Blocks for custom copy button
 with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
