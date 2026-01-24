@@ -98,12 +98,11 @@ with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
                 value="Describe this medical image. What do you see?",
                 lines=3
             )
-            max_tokens = gr.Slider(
-                minimum=100,
-                maximum=1000,
+            max_tokens = gr.Number(
+                label="Max Response Length (tokens)",
                 value=500,
-                step=50,
-                label="Max Response Length"
+                minimum=100,
+                maximum=1000
             )
             analyze_btn = gr.Button("🔍 Analyze Image", variant="primary")
         
@@ -144,8 +143,4 @@ with gr.Blocks(title="MedGemma 1.5 - Medical Image Analysis") as demo:
     """)
 
 if __name__ == "__main__":
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False
-    )
+    demo.launch()
