@@ -131,21 +131,17 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     ]
     
     # Update progress every 0.2 seconds for smoother animation
-    # Dynamic total time estimation that adjusts as processing continues
+    # Linear progress with fixed estimated time shown to user
     while not result_container["done"]:
         elapsed = time.time() - start_time
         
-        # Dynamically estimate total time based on elapsed time
-        # Assume we're always between 50-90% done to keep extending estimate
-        if elapsed < estimated_total_time * 0.5:
-            # Early phase: use initial estimate
-            current_estimate = estimated_total_time
-        else:
-            # Later phase: assume we're 80% done, so total = elapsed / 0.8
-            current_estimate = elapsed / 0.8
+        # Linear progress relative to estimated time
+        progress_pct = elapsed / estimated_total_time
         
-        # Linear progress relative to current estimate
-        progress_pct = elapsed / current_estimate
+        # If we exceed estimate, slow down progress growth but keep moving
+        if progress_pct > 0.9:
+            # Beyond 90%, progress slows down but keeps advancing
+            progress_pct = 0.9 + (progress_pct - 0.9) * 0.1
         
         # Cap at 95% until actually done
         progress_pct = min(progress_pct, 0.95)
@@ -153,8 +149,8 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         step_index = int(progress_pct * 10)
         step_index = min(step_index, 9)  # Max step 10 (index 9)
         
-        # Format time display with elapsed/current estimate
-        desc = f"{step_names[step_index]} - {elapsed:.0f}/{current_estimate:.0f}s"
+        # Format time display with elapsed/fixed estimate
+        desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total_time:.0f}s"
         progress(progress_pct, desc=desc)
         time.sleep(0.2)  # Update 5 times per second for smooth progress
     
