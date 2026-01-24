@@ -177,14 +177,23 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     # Update history
     new_history = history + [[question, result]]
     
-    # Format for copy: question + answer
-    copy_text = f"Question: {question}\n\nAnswer: {result}"
+    # Format conversation with number, question, and answer
+    conversation_num = len(new_history)
+    conversation_text = f"Conversation {conversation_num}:\n\nQuestion: {question}\n\nAnswer: {result}"
     
-    return result, new_history, copy_text
+    # Build full output with all conversations
+    full_output = ""
+    for i, (q, a) in enumerate(new_history, 1):
+        full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*80}\n\n"
+    
+    # Format for copy: all conversations
+    copy_text = full_output.strip()
+    
+    return full_output.strip(), new_history, copy_text
 
 def clear_history():
-    """Clear conversation history"""
-    return [], ""
+    """Clear conversation history, image, and output"""
+    return None, "", [], ""
 
 # Custom CSS for green progress bar
 custom_css = """
@@ -264,7 +273,7 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     clear_btn.click(
         fn=clear_history,
         inputs=[],
-        outputs=[history_state, copy_state]
+        outputs=[image_input, output_text, history_state, copy_state]
     )
     
     # Copy button functionality (copies question + answer to clipboard via JavaScript)
