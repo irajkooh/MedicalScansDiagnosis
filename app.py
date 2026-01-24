@@ -1,5 +1,5 @@
-# use deployed app.py on HF space "Chest_Scan_Diagnosis"
-# https://huggingface.co/spaces/irajkoohi/ChestScanDiagnosis?logs=build
+# use deployed app.py on HF space "Medical_Scans_Diagnosis"
+# https://huggingface.co/spaces/irajkoohi/MedicalScansDiagnosis?logs=build
 
 
 import gradio as gr
