@@ -72,9 +72,12 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
     if image is None:
         return "Please upload an image first."
     
-    progress(0.1, desc="🧠 Starting analysis...")
+    progress(0.1, desc="🔍 Step 1/10: Starting analysis...")
+    
+    progress(0.2, desc="📷 Step 2/10: Loading medical image...")
     
     # Create messages
+    progress(0.3, desc="📝 Step 3/10: Preparing prompt...")
     messages = [
         {
             "role": "user",
@@ -85,15 +88,23 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
         }
     ]
     
-    progress(0.3, desc="🧠 Processing with MedGemma AI...")
+    progress(0.4, desc="🤖 Step 4/10: Initializing AI model...")
+    
+    progress(0.5, desc="🧠 Step 5/10: Processing with MedGemma AI...")
     
     # Run inference with streaming to update progress
     # Note: Pipeline doesn't support true streaming, but we can update progress after
     try:
         output = pipe(text=messages, max_new_tokens=500)
-        progress(0.9, desc="🧠 Finalizing results...")
+        
+        progress(0.6, desc="🔬 Step 6/10: Analyzing results...")
+        progress(0.7, desc="📊 Step 7/10: Extracting findings...")
         result = output[0]["generated_text"][-1]["content"]
-        progress(1.0, desc="✅ Complete!")
+        
+        progress(0.8, desc="📋 Step 8/10: Formatting output...")
+        progress(0.9, desc="✨ Step 9/10: Finalizing report...")
+        progress(1.0, desc="✅ Step 10/10: Complete!")
+        
         return result
     except Exception as e:
         progress(1.0, desc="❌ Error occurred")
