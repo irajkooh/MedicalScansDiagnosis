@@ -72,7 +72,7 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
     if image is None:
         return "Please upload an image first."
     
-    progress(0, desc="🧠 Analyzing with MedGemma AI...")
+    progress(0.1, desc="🧠 Starting analysis...")
     
     # Create messages
     messages = [
@@ -85,10 +85,12 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
         }
     ]
     
+    progress(0.3, desc="🧠 Processing with MedGemma AI...")
+    
     # Run inference (fixed max_tokens)
     output = pipe(text=messages, max_new_tokens=500)
     
-    progress(1, desc="✅ Complete!")
+    progress(1.0, desc="✅ Complete!")
     
     return output[0]["generated_text"][-1]["content"]
 
