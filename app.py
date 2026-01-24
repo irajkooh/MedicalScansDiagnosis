@@ -141,7 +141,8 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     submit_btn.click(
         fn=analyze_medical_image,
         inputs=[image_input, question_input],
-        outputs=output_text
+        outputs=output_text,
+        show_progress="full"
     )
     
     # Copy button functionality (copies to clipboard via JavaScript)
