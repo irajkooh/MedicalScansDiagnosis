@@ -9,6 +9,7 @@ from PIL import Image
 from pathlib import Path
 from huggingface_hub import snapshot_download
 import os
+import time
 
 # Get HF token from environment
 hf_token = os.environ.get("MedicalScans_token")
@@ -71,7 +72,8 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
     if image is None:
         return "Please upload an image first."
     
-    progress(0, desc="Preparing image...")
+    progress(0, desc="🔍 Preparing image...")
+    time.sleep(0.1)  # Brief pause to show progress
     
     # Create messages
     messages = [
@@ -84,12 +86,12 @@ def analyze_medical_image(image, question, progress=gr.Progress()):
         }
     ]
     
-    progress(0.3, desc="Processing with MedGemma model...")
+    progress(0.3, desc="🧠 Analyzing with MedGemma AI...")
     
     # Run inference (fixed max_tokens)
     output = pipe(text=messages, max_new_tokens=500)
     
-    progress(1.0, desc="Analysis complete!")
+    progress(1.0, desc="✅ Complete!")
     
     return output[0]["generated_text"][-1]["content"]
 
