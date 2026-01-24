@@ -68,13 +68,12 @@ def load_model():
 print("Initializing model...")
 pipe = load_model()
 
-def analyze_medical_image(image, question, history, progress=gr.Progress()):
+def analyze_medical_image(image, question, history):
     """Analyze medical image with custom question and conversation history"""
     if image is None:
         return "Please upload an image first.", history, ""
     
     start_time = time.time()
-    estimated_total_time = 60  # Estimate 60 seconds for full process (CPU inference is slow)
     
     # Shared variables for threading
     result_container = {"output": None, "error": None, "done": False}
@@ -116,63 +115,21 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
     inference_thread = threading.Thread(target=run_inference)
     inference_thread.start()
     
-    # Update progress linearly based on time
-    step_names = [
-        "🔍 Starting analysis",
-        "📷 Loading medical image",
-        "📝 Preparing prompt",
-        "🤖 Initializing AI model",
-        "🧠 Processing with MedGemma AI",
-        "🔬 Analyzing results",
-        "📊 Extracting findings",
-        "📋 Formatting output",
-        "✨ Finalizing report",
-        "✅ Complete!"
-    ]
-    
-    # Update progress every 0.2 seconds for smoother animation
-    # Dynamic total time estimation based on actual processing speed
+    # Update output textbox with elapsed time during processing
     while not result_container["done"]:
         elapsed = time.time() - start_time
         
-        # Dynamically estimate total time based on how fast we're progressing
-        # Start with initial estimate, then adjust based on actual speed
-        if elapsed < 10:
-            # First 10 seconds: use initial estimate
-            estimated_total = estimated_total_time
-            progress_pct = elapsed / estimated_total
-        else:
-            # After 10 seconds: estimate based on actual progress
-            # Assume we're making steady progress toward completion
-            # Conservative estimate: assume current speed continues and we're 70% done
-            estimated_total = elapsed / 0.7
-            progress_pct = 0.7
-        
-        # Cap at 95% until actually done
-        progress_pct = min(progress_pct, 0.95)
-        
-        step_index = int(progress_pct * 10)
-        step_index = min(step_index, 9)  # Max step 10 (index 9)
-        
-        # Format time display with elapsed/dynamically estimated total
-        desc = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s"
-        progress(progress_pct, desc=desc)
-        
-        # Update the output textbox with processing status showing step, time, percentage, and estimated total at bottom
-        percentage = progress_pct * 100
-        status_text = f"{step_names[step_index]} - {elapsed:.0f}/{estimated_total:.0f}s - {percentage:.1f}%\n\n{'─'*80}\nElapsed: {elapsed:.1f}s  |  Estimated Total: ~{estimated_total:.0f}s"
+        # Show processing status with elapsed time
+        status_text = f"Processing medical image analysis...\n\n{'─'*80}\nElapsed Time: {elapsed:.1f}s"
         yield status_text, history, ""
         
-        time.sleep(0.2)  # Update 5 times per second for smooth progress
+        time.sleep(0.5)  # Update every 0.5 seconds
     
     # Wait for thread to complete
     inference_thread.join()
     
     # Calculate total time
     total_time = time.time() - start_time
-    
-    # Final progress update with total time
-    progress(1.0, desc=f"✅ Complete! - {total_time:.0f}/{total_time:.0f}s")
     
     # Handle results
     if result_container["error"]:
@@ -275,7 +232,6 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
         fn=analyze_medical_image,
         inputs=[image_input, question_input, history_state],
         outputs=[output_text, history_state, copy_state],
-        show_progress="full",
         concurrency_limit=10
     )
     
