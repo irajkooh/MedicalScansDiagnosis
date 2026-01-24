@@ -10,6 +10,7 @@ from pathlib import Path
 from huggingface_hub import snapshot_download
 import os
 import time
+import threading
 
 # Get HF token from environment
 hf_token = os.environ.get("MedicalScans_token")
@@ -67,48 +68,102 @@ def load_model():
 print("Initializing model...")
 pipe = load_model()
 
-def analyze_medical_image(image, question, progress=gr.Progress()):
-    """Analyze medical image with custom question"""
+def analyze_medical_image(image, question, history, progress=gr.Progress()):
+    """Analyze medical image with custom question and conversation history"""
     if image is None:
-        return "Please upload an image first."
+        return "Please upload an image first.", history, ""
     
-    progress(0.1, desc="🔍 Step 1/10: Starting analysis...")
+    start_time = time.time()
+    estimated_total_time = 30  # Estimate 30 seconds for full process
     
-    progress(0.2, desc="📷 Step 2/10: Loading medical image...")
+    # Shared variables for threading
+    result_container = {"output": None, "error": None, "done": False}
     
-    # Create messages
-    progress(0.3, desc="📝 Step 3/10: Preparing prompt...")
-    messages = [
-        {
+    # Create messages with conversation history
+    messages = []
+    
+    # Add conversation history
+    for prev_q, prev_a in history:
+        messages.append({
             "role": "user",
-            "content": [
-                {"type": "image", "image": image},
-                {"type": "text", "text": question}
-            ]
-        }
+            "content": [{"type": "text", "text": prev_q}]
+        })
+        messages.append({
+            "role": "assistant",
+            "content": [{"type": "text", "text": prev_a}]
+        })
+    
+    # Add current question with image
+    messages.append({
+        "role": "user",
+        "content": [
+            {"type": "image", "image": image},
+            {"type": "text", "text": question}
+        ]
+    })
+    
+    # Run inference in a separate thread
+    def run_inference():
+        try:
+            output = pipe(text=messages, max_new_tokens=500)
+            result_container["output"] = output[0]["generated_text"][-1]["content"]
+        except Exception as e:
+            result_container["error"] = str(e)
+        finally:
+            result_container["done"] = True
+    
+    # Start inference thread
+    inference_thread = threading.Thread(target=run_inference)
+    inference_thread.start()
+    
+    # Update progress linearly based on time
+    step_descriptions = [
+        "🔍 Step 1/10: Starting analysis...",
+        "📷 Step 2/10: Loading medical image...",
+        "📝 Step 3/10: Preparing prompt...",
+        "🤖 Step 4/10: Initializing AI model...",
+        "🧠 Step 5/10: Processing with MedGemma AI...",
+        "🔬 Step 6/10: Analyzing results...",
+        "📊 Step 7/10: Extracting findings...",
+        "📋 Step 8/10: Formatting output...",
+        "✨ Step 9/10: Finalizing report...",
+        "✅ Step 10/10: Complete!"
     ]
     
-    progress(0.4, desc="🤖 Step 4/10: Initializing AI model...")
+    # Update progress every 0.5 seconds
+    while not result_container["done"]:
+        elapsed = time.time() - start_time
+        progress_pct = min(0.9, elapsed / estimated_total_time)  # Cap at 90% until done
+        step_index = int(progress_pct * 10)
+        step_index = min(step_index, 8)  # Max step 9 (index 8) until complete
+        
+        progress(progress_pct, desc=step_descriptions[step_index])
+        time.sleep(0.5)
     
-    progress(0.5, desc="🧠 Step 5/10: Processing with MedGemma AI...")
+    # Wait for thread to complete
+    inference_thread.join()
     
-    # Run inference with streaming to update progress
-    # Note: Pipeline doesn't support true streaming, but we can update progress after
-    try:
-        output = pipe(text=messages, max_new_tokens=500)
-        
-        progress(0.6, desc="🔬 Step 6/10: Analyzing results...")
-        progress(0.7, desc="📊 Step 7/10: Extracting findings...")
-        result = output[0]["generated_text"][-1]["content"]
-        
-        progress(0.8, desc="📋 Step 8/10: Formatting output...")
-        progress(0.9, desc="✨ Step 9/10: Finalizing report...")
-        progress(1.0, desc="✅ Step 10/10: Complete!")
-        
-        return result
-    except Exception as e:
-        progress(1.0, desc="❌ Error occurred")
-        return f"Error during analysis: {str(e)}"
+    # Final progress update
+    progress(1.0, desc=step_descriptions[9])
+    
+    # Handle results
+    if result_container["error"]:
+        error_msg = f"Error during analysis: {result_container['error']}"
+        return error_msg, history, f"Question: {question}\n\nAnswer: {error_msg}"
+    
+    result = result_container["output"]
+    
+    # Update history
+    new_history = history + [[question, result]]
+    
+    # Format for copy: question + answer
+    copy_text = f"Question: {question}\n\nAnswer: {result}"
+    
+    return result, new_history, copy_text
+
+def clear_history():
+    """Clear conversation history"""
+    return [], ""
 
 # Create Gradio interface with Blocks for custom copy button
 with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
@@ -123,6 +178,10 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     ⚠️ **Important:** This is for research purposes only. Not for clinical diagnosis.
     """)
     
+    # Hidden state for conversation history
+    history_state = gr.State([])
+    copy_state = gr.State("")
+    
     with gr.Row():
         with gr.Column():
             image_input = gr.Image(type="pil", label="Upload Medical Image")
@@ -132,7 +191,9 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 value="Describe this medical image. What do you see?",
                 lines=3
             )
-            submit_btn = gr.Button("Analyze", variant="primary")
+            with gr.Row():
+                submit_btn = gr.Button("Analyze", variant="primary")
+                clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
             output_text = gr.Textbox(label="Analysis Result", lines=15)
@@ -141,13 +202,16 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     # Examples section
     gr.Examples(
         examples=[
-            [None, "Describe this chest X-ray. What do you see?"],
+            [None, "Describe this medical image. What do you see?"],
+            [None, "Is this a normal or abnormal scan?"],
+            [None, "What are the biological reasons for this abnormality?"],
+            [None, "Provide detailed explanations for your diagnosis."],
+            [None, "Summarize the findings in a concise manner."],
+            [None, "What anatomical structures are visible in this image?"],
+            [None, "Describe any pathological findings in this scan."],
+            [None, "What is the overall quality of this medical image?"],
             [None, "Are there any signs of pneumonia, cardiomegaly, or pleural effusion?"],
             [None, "Identify and describe the location of the heart, lungs, and any abnormalities."],
-            [None, "What is the overall quality of this medical image?"],
-            [None, "Describe any pathological findings in this scan."],
-            [None, "Is this a normal or abnormal scan?"],
-            [None, "What anatomical structures are visible in this image?"]
         ],
         inputs=[image_input, question_input],
         cache_examples=False
@@ -156,14 +220,21 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
     # Connect the analyze button
     submit_btn.click(
         fn=analyze_medical_image,
-        inputs=[image_input, question_input],
-        outputs=output_text,
+        inputs=[image_input, question_input, history_state],
+        outputs=[output_text, history_state, copy_state],
         show_progress="full",
         concurrency_limit=10
     )
     
-    # Copy button functionality (copies to clipboard via JavaScript)
-    copy_btn.click(None, output_text, None, js="(x) => {navigator.clipboard.writeText(x); return x;}")
+    # Clear button functionality
+    clear_btn.click(
+        fn=clear_history,
+        inputs=[],
+        outputs=[history_state, copy_state]
+    )
+    
+    # Copy button functionality (copies question + answer to clipboard via JavaScript)
+    copy_btn.click(None, copy_state, None, js="(x) => {navigator.clipboard.writeText(x); return x;}")
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
