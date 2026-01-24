@@ -115,15 +115,8 @@ def analyze_medical_image(image, question, history):
     inference_thread = threading.Thread(target=run_inference)
     inference_thread.start()
     
-    # Update output textbox with elapsed time during processing
-    while not result_container["done"]:
-        elapsed = time.time() - start_time
-        
-        # Show processing status with elapsed time
-        status_text = f"Processing medical image analysis...\n\n{'─'*80}\nElapsed Time: {elapsed:.1f}s"
-        yield status_text, history, ""
-        
-        time.sleep(0.5)  # Update every 0.5 seconds
+    # Show initial status with estimated time
+    yield "Processing medical image analysis...\n\n" + "─"*80 + "\nEstimated Processing Time: ~60-90 seconds", history, ""
     
     # Wait for thread to complete
     inference_thread.join()
@@ -156,7 +149,7 @@ def analyze_medical_image(image, question, history):
     # Format for copy: all conversations
     copy_text = full_output.strip()
     
-    yield full_output.strip(), new_history, copy_text
+    return full_output.strip(), new_history, copy_text
 
 def clear_history():
     """Clear conversation history, image, and output"""
