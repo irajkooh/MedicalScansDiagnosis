@@ -112,7 +112,7 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         
         progress(0.6, desc="🔬 Step 6/10: Analyzing results...")
         progress(0.7, desc="📊 Step 7/10: Extracting findings...")
-        result = output[0]["generated_text"][-1]["content"]
+        result = output[0]["generated_text"][-1]["content"]  # type: ignore
         
         progress(0.8, desc="📋 Step 8/10: Formatting output...")
         progress(0.9, desc="✨ Step 9/10: Finalizing report...")
