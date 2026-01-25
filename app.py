@@ -274,4 +274,8 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
-    demo.launch(css=custom_css)
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        css=custom_css
+    )
