@@ -164,7 +164,7 @@ custom_css = """
 """
 
 # Create Gradio interface with Blocks for custom copy button
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css) as demo:
 
     gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
     gr.Markdown("""
@@ -286,8 +286,7 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        inbrowser=True,
-        css=custom_css
+        inbrowser=True
     )
 
 
