@@ -1,7 +1,13 @@
 # use deployed app.py on HF space "Medical_Scans_Diagnosis"
 # https://huggingface.co/spaces/irajkoohi/MedicalScansDiagnosis?logs=build
 
+# If running locally:
+"""
+clear && lsof -ti:7860 | xargs kill -9 2>/dev/null; fg 2>/dev/null && sleep 0.5 && pkill -9 -f "python app.py" || true
+source .venv/bin/activate && MedicalScans_token=YOUR_HF_TOKEN_HERE python app.py
 
+Open your browser and go to: http://localhost:7860
+"""
 import gradio as gr
 from transformers import pipeline
 import torch
@@ -56,7 +62,7 @@ def load_model():
         "image-text-to-text",
         model=model_path,
         dtype=torch.bfloat16,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        device="mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"),
         token=hf_token,
     )
     print(f"Model loaded successfully on {pipe.device}")
@@ -158,7 +164,9 @@ custom_css = """
 """
 
 # Create Gradio interface with Blocks for custom copy button
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+#with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css) as demo:
+
     gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
     gr.Markdown("""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
@@ -188,7 +196,9 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
                 clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
         
         with gr.Column():
-            output_text = gr.Textbox(label="Analysis Results", lines=24, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
+            #output_text = gr.Textbox(label="Analysis Results", lines=24, max_lines=None, autoscroll=True, show_label=True, container=True, interactive=False)
+            output_text = gr.Textbox(label="Analysis Results", lines=24, autoscroll=True, show_label=True, container=True, interactive=False)
+
             copy_btn = gr.Button("📋 Copy Results", size="sm", interactive=False)
     
     # Examples section
@@ -277,5 +287,7 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        css=custom_css
+        inbrowser=True
     )
+
+
