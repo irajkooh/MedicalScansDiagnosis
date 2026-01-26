@@ -6,7 +6,7 @@
 clear && lsof -ti:7860 | xargs kill -9 2>/dev/null; fg 2>/dev/null && sleep 0.5 && pkill -9 -f "python app.py" || true
 source .venv/bin/activate && MedicalScans_token=YOUR_HF_TOKEN_HERE python app.py
 
-Open your browser and go to: http://localhost:7860
+App running on: http://localhost:7860
 """
 import gradio as gr
 from transformers import pipeline
