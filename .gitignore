@@ -42,3 +42,4 @@ _*.jpg
 # Backup files
 *copy*.py
 *_.py
+_HowToDeployToHFSpace.md
