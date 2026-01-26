@@ -43,3 +43,6 @@ _*.jpg
 *copy*.py
 *_.py
 _HowToDeployToHFSpace.md
+
+# Notebook files with potential secrets
+*.ipynb
