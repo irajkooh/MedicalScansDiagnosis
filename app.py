@@ -4,7 +4,7 @@
 # If running locally:
 """
 clear && lsof -ti:7860 | xargs kill -9 2>/dev/null; fg 2>/dev/null && sleep 0.5 && pkill -9 -f "python app.py" || true
-source .venv/bin/activate && MedicalScans_token=YOUR_HF_TOKEN_HERE python app.py
+source .venv/bin/activate && GROQ_API_KEY=YOUR_HF_TOKEN_HERE python app.py
 
 App running on: http://localhost:7860
 """
@@ -18,18 +18,18 @@ import os
 import time
 
 # Get HF token from environment
-hf_token = os.environ.get("MedicalScans_token")
+hf_token = os.environ.get("GROQ_API_KEY")
 
 if not hf_token:
     raise ValueError(
-        "MedicalScans_token environment variable not found!\n"
+        "GROQ_API_KEY environment variable not found!\n"
         "Please add your Hugging Face token as a secret in Space settings:\n"
         "1. Go to Settings tab\n"
         "2. Navigate to 'Variables and secrets'\n"
-        "3. Add MedicalScans_token with your token value from https://huggingface.co/settings/tokens"
+        "3. Add GROQ_API_KEY with your token value from https://huggingface.co/settings/tokens"
     )
 
-print(f"✓ MedicalScans_token found (length: {len(hf_token)})")
+print(f"✓ GROQ_API_KEY found (length: {len(hf_token)})")
 
 # Load model function
 def load_model():
