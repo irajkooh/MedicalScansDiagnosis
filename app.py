@@ -207,7 +207,7 @@ custom_css = """
 """
 
 # Create Gradio interface
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css) as demo:
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
 
     gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
 
@@ -368,5 +368,6 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        inbrowser=True
+        inbrowser=True,
+        css=custom_css
     )
