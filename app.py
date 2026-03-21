@@ -22,25 +22,25 @@ import subprocess
 os.system("clear")
 subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
 
-# Auto-load GROQ_API_KEY from file if not already set
-if not os.environ.get("GROQ_API_KEY"):
-    key_file = Path(__file__).parent / ".GROQ_API_KEY.txt"
-    if key_file.exists():
-        os.environ["GROQ_API_KEY"] = key_file.read_text().strip()
+# Auto-load HF_TOKEN from file if not already set (local dev)
+if not os.environ.get("HF_TOKEN"):
+    hf_token_file = Path(__file__).parent / ".HF_token.txt"
+    if hf_token_file.exists():
+        os.environ["HF_TOKEN"] = hf_token_file.read_text().strip()
 
-# Get HF token from environment
-hf_token = os.environ.get("GROQ_API_KEY")
+# HF token for downloading gated model
+hf_token = os.environ.get("HF_TOKEN")
 
 if not hf_token:
     raise ValueError(
-        "GROQ_API_KEY environment variable not found!\n"
+        "HF_TOKEN environment variable not found!\n"
         "Please add your Hugging Face token as a secret in Space settings:\n"
         "1. Go to Settings tab\n"
         "2. Navigate to 'Variables and secrets'\n"
-        "3. Add GROQ_API_KEY with your token value from https://huggingface.co/settings/tokens"
+        "3. Add HF_TOKEN with your token value from https://huggingface.co/settings/tokens"
     )
 
-print(f"✓ GROQ_API_KEY found (length: {len(hf_token)})")
+print(f"✓ HF_TOKEN found (length: {len(hf_token)})")
 
 # Load model function
 def load_model():
