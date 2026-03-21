@@ -95,7 +95,7 @@ info_html = f"""
             color:#1d4ed8;font-size:14px;display:flex;gap:32px;flex-wrap:wrap;margin-bottom:4px;">
   <span>🖥️ <b>Running:</b> {running_on}</span>
   <span>⚡ <b>Device:</b> {device_name}</span>
-  <span>🤖 <b>Model:</b> {model_name}</span>
+  <span>🧠 <b>LLM:</b> {model_name}</span>
 </div>
 """
 
@@ -207,7 +207,7 @@ custom_css = """
 """
 
 # Create Gradio interface
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css) as demo:
 
     gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
 
@@ -368,6 +368,5 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        inbrowser=True,
-        css=custom_css
+        inbrowser=True
     )
