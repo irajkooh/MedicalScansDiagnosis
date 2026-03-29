@@ -20,8 +20,7 @@ import subprocess
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# Clear screen and free port 7860 on local startup
-os.system("clear")
+# Free port 7860 on local startup (lsof not available in HF containers)
 subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
 
 # Auto-load HF_TOKEN from file if not already set (local dev)
