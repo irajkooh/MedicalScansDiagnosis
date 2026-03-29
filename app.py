@@ -74,8 +74,8 @@ def load_model():
     pipe = pipeline(
         "image-text-to-text",
         model=model_path,
-        dtype=torch.bfloat16,
-        device="mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu"),
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
         token=hf_token,
     )
     print(f"Model loaded successfully on {pipe.device}")
