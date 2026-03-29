@@ -77,6 +77,7 @@ def load_model():
         torch_dtype=torch.bfloat16,
         device_map="auto",
         token=hf_token,
+        trust_remote_code=True,
     )
     print(f"Model loaded successfully on {pipe.device}")
 
