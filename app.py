@@ -161,8 +161,8 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
 
         # Build full output with all conversations
         full_output = ""
-        for i, (q, a) in enumerate(new_history, 1):
-            full_output += f"Conversation {i}:\n\nQuestion: {q}\n\nAnswer: {a}\n\n{'='*10}\n\n"
+        for q, a in new_history:
+            full_output += f"Question: {q}\n\nAnswer: {a}\n\n{'='*10}\n\n"
 
         copy_text = full_output.strip()
 
