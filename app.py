@@ -17,6 +17,8 @@ from huggingface_hub import snapshot_download
 import os
 import time
 import subprocess
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Clear screen and free port 7860 on local startup
 os.system("clear")
@@ -189,25 +191,8 @@ SAMPLE_QUESTIONS = [
     "Identify and describe the location of the heart, lungs, and any abnormalities.",
 ]
 
-# Custom CSS
-custom_css = """
-.progress-bar {
-    background-color: #10b981 !important;
-}
-.progress-container progress::-webkit-progress-value {
-    background-color: #10b981 !important;
-}
-.progress-container progress::-moz-progress-bar {
-    background-color: #10b981 !important;
-}
-.sample-btn {
-    text-align: left !important;
-    font-size: 13px !important;
-}
-"""
-
 # Create Gradio interface
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css) as demo:
+with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
 
     gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
 
@@ -362,6 +347,20 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis", css=custom_css
             fn=lambda: [gr.update(interactive=True), gr.update(interactive=True)],
             outputs=[copy_btn, read_btn]
         )
+
+SPACE_URL = "https://irajkoohi-medicalscansdiagnosis.hf.space"
+
+def self_ping():
+    try:
+        requests.get(SPACE_URL, timeout=10)
+        print("✓ Self-ping successful")
+    except Exception as e:
+        print(f"✗ Self-ping failed: {e}")
+
+# The 30-minute interval is well within HF's ~48hr sleep timeout, so the Space stays alive.
+scheduler = BackgroundScheduler()
+scheduler.add_job(self_ping, "interval", minutes=30)
+scheduler.start()
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
