@@ -190,7 +190,8 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
             )
             with gr.Row():
                 submit_btn = gr.Button("Analyze", variant="primary", interactive=False)
-                clear_btn = gr.Button("🗑️ Clear History", variant="secondary")
+                stop_btn = gr.Button("⏹ Stop", variant="stop")
+                read_btn = gr.Button("🔊 Read", size="sm", interactive=False)
 
         with gr.Column():
             output_text = gr.Textbox(
@@ -202,7 +203,7 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
                 interactive=False
             )
             with gr.Row():
-                read_btn = gr.Button("🔊 Read", size="sm", interactive=False)
+                clear_btn = gr.Button("🗑️ Clear History", variant="secondary", size="sm")
                 copy_btn = gr.Button("📋 Copy Results", size="sm", interactive=False)
 
     with gr.Accordion("💡 Sample Questions — click to auto-analyze", open=True):
@@ -215,7 +216,7 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
 
     # --- Event wiring ---
 
-    submit_btn.click(
+    submit_event = submit_btn.click(
         fn=analyze_medical_image,
         inputs=[image_input, question_input, history_state],
         outputs=[output_text, history_state, copy_state],
@@ -272,8 +273,9 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
         """
     )
 
+    sample_events = []
     for btn, q in sample_btn_rows:
-        btn.click(
+        ev = btn.click(
             fn=lambda question=q: question,
             inputs=[], outputs=[question_input], queue=False
         ).then(
@@ -285,7 +287,15 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
             fn=lambda: [gr.update(interactive=True), gr.update(interactive=True)],
             outputs=[copy_btn, read_btn]
         )
+        sample_events.append(ev)
+
+    # Stop button cancels all running analysis events
+    stop_btn.click(fn=None, cancels=[submit_event, *sample_events])
+
+demo.queue(default_concurrency_limit=10)
 
 if __name__ == "__main__":
-    demo.queue(default_concurrency_limit=10)
-    demo.launch(server_name="0.0.0.0", server_port=7860, inbrowser=True)
+    demo.launch(server_name="0.0.0.0", server_port=7860, inbrowser=True, ssr_mode=False)
+else:
+    # HF Spaces entry point
+    demo.launch(server_name="0.0.0.0", server_port=7860, ssr_mode=False)
