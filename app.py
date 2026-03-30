@@ -144,8 +144,8 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
         error_msg = f"Error during analysis: {str(e)}"
         return error_msg, history, f"Question: {question}\n\nAnswer: {error_msg}"
 
-def clear_history():
-    return None, "", [], ""
+def clear_chat():
+    return "", [], ""
 
 # ── Sample questions ──────────────────────────────────────────────────────────
 SAMPLE_QUESTIONS = [
@@ -217,7 +217,7 @@ with gr.Blocks(title="🏥 Medical Image Analysis", css=CSS) as demo:
                 interactive=False
             )
             with gr.Row():
-                clear_btn = gr.Button("🗑️ Clear History", variant="secondary", size="sm")
+                clear_btn = gr.Button("🗑️ Clear Chat", variant="secondary", size="sm")
                 copy_btn = gr.Button("📋 Copy Results", size="sm", interactive=False)
 
     with gr.Accordion("💡 Sample Questions — click to auto-analyze", open=True):
@@ -250,12 +250,12 @@ with gr.Blocks(title="🏥 Medical Image Analysis", css=CSS) as demo:
     image_input.change(fn=update_analyze_button, inputs=[image_input, question_input], outputs=submit_btn)
 
     clear_btn.click(
-        fn=clear_history,
+        fn=clear_chat,
         inputs=[],
-        outputs=[image_input, output_text, history_state, copy_state]
+        outputs=[output_text, history_state, copy_state]
     ).then(
-        fn=lambda: [gr.update(interactive=False), gr.update(interactive=False), gr.update(interactive=False)],
-        outputs=[submit_btn, copy_btn, read_btn]
+        fn=lambda: [gr.update(interactive=False), gr.update(interactive=False)],
+        outputs=[copy_btn, read_btn]
     )
 
     copy_btn.click(
