@@ -36,7 +36,7 @@ if is_hf_space:
             "Go to Settings → Variables and secrets → add GROQ_API_KEY."
         )
     groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    GROQ_MODEL = "llama-3.2-90b-vision-preview"
+    GROQ_MODEL = "llama-4-scout-17b-16e-instruct"
     llm_label = f"Groq / {GROQ_MODEL}"
     print(f"✓ Backend: Groq ({GROQ_MODEL})")
 
@@ -161,8 +161,22 @@ SAMPLE_QUESTIONS = [
     "Identify and describe the location of the heart, lungs, and any abnormalities.",
 ]
 
+CSS = """
+/* Click feel for all buttons */
+button { transition: transform 0.08s, filter 0.08s !important; }
+button:active { transform: scale(0.95) !important; filter: brightness(0.88) !important; }
+
+/* Read button — default green */
+#read-btn button {
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+    color: white !important;
+}
+#read-btn button:hover { background: #15803d !important; border-color: #15803d !important; }
+"""
+
 # ── Gradio UI ─────────────────────────────────────────────────────────────────
-with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
+with gr.Blocks(title="🏥 Medical Image Analysis", css=CSS) as demo:
 
     gr.Markdown("# 🏥 Medical Image Analysis")
     gr.HTML(info_html)
@@ -191,7 +205,7 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
             with gr.Row():
                 submit_btn = gr.Button("Analyze", variant="primary", interactive=False)
                 stop_btn = gr.Button("⏹ Stop", variant="stop")
-                read_btn = gr.Button("🔊 Read", size="sm", interactive=False)
+                read_btn = gr.Button("🔊 Read", interactive=False, elem_id="read-btn")
 
         with gr.Column():
             output_text = gr.Textbox(
@@ -216,13 +230,15 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
 
     # --- Event wiring ---
 
-    submit_event = submit_btn.click(
+    # Capture click event separately so stop_btn can cancel it
+    submit_click = submit_btn.click(
         fn=analyze_medical_image,
         inputs=[image_input, question_input, history_state],
         outputs=[output_text, history_state, copy_state],
         show_progress="full",
         concurrency_limit=10
-    ).then(
+    )
+    submit_click.then(
         fn=lambda: [gr.update(interactive=True), gr.update(interactive=True)],
         outputs=[copy_btn, read_btn]
     )
@@ -257,40 +273,61 @@ with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
         """
     )
 
+    # Read toggle: green (idle/done) → orange (reading), label toggles
     read_btn.click(
         None, output_text, None,
         js="""
         (text) => {
-            if (!window.speechSynthesis) return;
+            const btn = document.querySelector('#read-btn button');
+            if (!window.speechSynthesis || !btn) return;
+
+            const setReady = () => {
+                btn.innerHTML = '🔊 Read';
+                btn.style.background = '#16a34a';
+                btn.style.borderColor = '#16a34a';
+            };
+            const setReading = () => {
+                btn.innerHTML = '⏹ Stop Reading';
+                btn.style.background = '#f97316';
+                btn.style.borderColor = '#f97316';
+            };
+
             if (window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
+                setReady();
             } else if (text) {
                 const parts = text.split('==========').map(s => s.trim()).filter(s => s.length > 0);
                 const utterance = new SpeechSynthesisUtterance(parts[parts.length - 1] || text);
+                utterance.onend = setReady;
+                utterance.onerror = setReady;
                 window.speechSynthesis.speak(utterance);
+                setReading();
             }
         }
         """
     )
 
-    sample_events = []
+    # Sample button events — capture analyze events for stop cancellation
+    all_analyze_events = [submit_click]
     for btn, q in sample_btn_rows:
-        ev = btn.click(
+        set_q = btn.click(
             fn=lambda question=q: question,
             inputs=[], outputs=[question_input], queue=False
-        ).then(
+        )
+        analyze_ev = set_q.then(
             fn=analyze_medical_image,
             inputs=[image_input, question_input, history_state],
             outputs=[output_text, history_state, copy_state],
             show_progress="full", concurrency_limit=10
-        ).then(
+        )
+        analyze_ev.then(
             fn=lambda: [gr.update(interactive=True), gr.update(interactive=True)],
             outputs=[copy_btn, read_btn]
         )
-        sample_events.append(ev)
+        all_analyze_events.append(analyze_ev)
 
-    # Stop button cancels all running analysis events
-    stop_btn.click(fn=None, cancels=[submit_event, *sample_events])
+    # Stop cancels all analysis events
+    stop_btn.click(fn=None, cancels=all_analyze_events)
 
 demo.queue(default_concurrency_limit=10)
 
