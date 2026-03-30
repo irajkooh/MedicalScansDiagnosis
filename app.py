@@ -17,8 +17,6 @@ from huggingface_hub import snapshot_download
 import os
 import time
 import subprocess
-import requests
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # Free port 7860 on local startup (lsof not available in HF containers)
 subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
@@ -73,7 +71,7 @@ def load_model():
     pipe = pipeline(
         "image-text-to-text",
         model=model_path,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         device_map="auto",
         token=hf_token,
         trust_remote_code=True,
@@ -347,20 +345,6 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
             fn=lambda: [gr.update(interactive=True), gr.update(interactive=True)],
             outputs=[copy_btn, read_btn]
         )
-
-SPACE_URL = "https://irajkoohi-medicalscansdiagnosis.hf.space"
-
-def self_ping():
-    try:
-        requests.get(SPACE_URL, timeout=10)
-        print("✓ Self-ping successful")
-    except Exception as e:
-        print(f"✗ Self-ping failed: {e}")
-
-# The 30-minute interval is well within HF's ~48hr sleep timeout, so the Space stays alive.
-scheduler = BackgroundScheduler()
-scheduler.add_job(self_ping, "interval", minutes=30)
-scheduler.start()
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
