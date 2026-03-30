@@ -1,7 +1,7 @@
 # use deployed app.py on HF space "Medical_Scans_Diagnosis"
 # https://huggingface.co/spaces/irajkoohi/MedicalScansDiagnosis?logs=build
 
-# If running locally:
+# If running locally (uses Ollama — run: ollama run llama3.2-vision):
 """
 clear && lsof -ti:7860 | xargs kill -9 2>/dev/null; fg 2>/dev/null && sleep 0.5 && pkill -9 -f "python app.py" || true
 source .venv/bin/activate && python app.py
@@ -17,119 +17,120 @@ import time
 import base64
 from io import BytesIO
 import subprocess
-from groq import Groq
 
 # Free port 7860 on local startup (lsof not available in HF containers)
 subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
 
-# Auto-load GROQ_API_KEY from file if not already set (local dev)
-if not os.environ.get("GROQ_API_KEY"):
-    groq_key_file = Path(__file__).parent / ".GROQ_API_KEY.txt"
-    if groq_key_file.exists():
-        for line in groq_key_file.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("gsk_"):
-                os.environ["GROQ_API_KEY"] = line
-                break
-
-groq_api_key = os.environ.get("GROQ_API_KEY")
-
-if not groq_api_key:
-    raise ValueError(
-        "GROQ_API_KEY environment variable not found!\n"
-        "Please add your Groq API key as a secret in Space settings:\n"
-        "1. Go to Settings tab\n"
-        "2. Navigate to 'Variables and secrets'\n"
-        "3. Add GROQ_API_KEY with your key from https://console.groq.com/keys"
-    )
-
-print(f"✓ GROQ_API_KEY found (length: {len(groq_api_key)})")
-
-# Initialize Groq client and model
-client = Groq(api_key=groq_api_key)
-GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
-
-# Detect available device
-def get_device_info():
-    if torch.cuda.is_available():
-        device_name = torch.cuda.get_device_name(0)
-        return f"CUDA — {device_name}"
-    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        return "MPS (Apple Silicon)"
-    else:
-        return "CPU"
-
-# Environment info
+# Detect environment early — determines which backend to use
 is_hf_space = os.environ.get("SPACE_ID") is not None
 running_on = "HuggingFace Space" if is_hf_space else "Local"
+
+# ── Backend setup ─────────────────────────────────────────────────────────────
+if is_hf_space:
+    # HF Space → Groq (fast cloud inference)
+    from groq import Groq
+
+    if not os.environ.get("GROQ_API_KEY"):
+        raise ValueError(
+            "GROQ_API_KEY secret not set in Space settings.\n"
+            "Go to Settings → Variables and secrets → add GROQ_API_KEY."
+        )
+    groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
+    GROQ_MODEL = "llama-3.2-90b-vision-preview"
+    llm_label = f"Groq / {GROQ_MODEL}"
+    print(f"✓ Backend: Groq ({GROQ_MODEL})")
+
+else:
+    # Local → Ollama (no API key needed)
+    import ollama as _ollama
+    OLLAMA_MODEL = "llama3.2-vision"
+    llm_label = f"Ollama / {OLLAMA_MODEL}"
+    print(f"✓ Backend: Ollama ({OLLAMA_MODEL})")
+
+# ── Device detection ──────────────────────────────────────────────────────────
+def get_device_info():
+    if torch.cuda.is_available():
+        return f"CUDA — {torch.cuda.get_device_name(0)}"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "MPS (Apple Silicon)"
+    return "CPU"
+
 device_name = get_device_info()
+print(f"✓ Running on: {running_on}, Device: {device_name}, LLM: {llm_label}")
 
-print(f"✓ Running on: {running_on}, Device: {device_name}, Model: {GROQ_MODEL}")
-
+# ── Info bar (shown at top of UI) ─────────────────────────────────────────────
 info_html = f"""
 <div style="background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 18px;
             color:#1d4ed8;font-size:14px;display:flex;gap:32px;flex-wrap:wrap;margin-bottom:4px;">
   <span>🖥️ <b>Running:</b> {running_on}</span>
   <span>⚡ <b>Device:</b> {device_name}</span>
-  <span>🧠 <b>LLM:</b> Groq / {GROQ_MODEL}</span>
+  <span>🧠 <b>LLM:</b> {llm_label}</span>
 </div>
 """
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def image_to_base64(img: Image.Image) -> str:
-    """Convert PIL image to base64 PNG string."""
-    buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode("utf-8")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
 
+def image_to_bytes(img: Image.Image) -> bytes:
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+# ── Inference ─────────────────────────────────────────────────────────────────
 def analyze_medical_image(image, question, history, progress=gr.Progress()):
-    """Analyze medical image with custom question and conversation history"""
     if image is None:
         return "Please upload an image first.", history, ""
 
     start_time = time.time()
-
     progress(0.2, desc="📷 Encoding image...")
 
-    img_b64 = image_to_base64(image)
-
-    progress(0.4, desc="🧠 Sending to Groq AI...")
-
-    # Build messages: prior turns are text-only, current turn includes image
-    messages = []
-    for prev_q, prev_a in history:
-        messages.append({"role": "user", "content": prev_q})
-        messages.append({"role": "assistant", "content": prev_a})
-
-    messages.append({
-        "role": "user",
-        "content": [
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{img_b64}"}
-            },
-            {
-                "type": "text",
-                "text": question
-            }
-        ]
-    })
-
     try:
-        response = client.chat.completions.create(
-            model=GROQ_MODEL,
-            messages=messages,
-            max_tokens=500
-        )
+        if is_hf_space:
+            # Build Groq messages (prior turns text-only, current turn has image)
+            messages = []
+            for prev_q, prev_a in history:
+                messages.append({"role": "user", "content": prev_q})
+                messages.append({"role": "assistant", "content": prev_a})
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "image_url",
+                     "image_url": {"url": f"data:image/png;base64,{image_to_base64(image)}"}},
+                    {"type": "text", "text": question}
+                ]
+            })
 
-        progress(0.9, desc="📋 Formatting output...")
+            progress(0.5, desc="🧠 Sending to Groq AI...")
+            response = groq_client.chat.completions.create(
+                model=GROQ_MODEL,
+                messages=messages,
+                max_tokens=500
+            )
+            result = response.choices[0].message.content
 
-        result = response.choices[0].message.content
+        else:
+            # Build Ollama messages
+            messages = []
+            for prev_q, prev_a in history:
+                messages.append({"role": "user", "content": prev_q})
+                messages.append({"role": "assistant", "content": prev_a})
+            messages.append({
+                "role": "user",
+                "content": question,
+                "images": [image_to_bytes(image)]
+            })
+
+            progress(0.5, desc="🧠 Sending to Ollama...")
+            response = _ollama.chat(model=OLLAMA_MODEL, messages=messages)
+            result = response["message"]["content"]
+
         total_time = time.time() - start_time
-
         progress(1.0, desc=f"✅ Complete! ({total_time:.1f}s)")
 
         new_history = history + [[question, result]]
-
         full_output = ""
         for q, a in new_history:
             full_output += f"Question: {q}\n\nAnswer: {a}\n\n{'='*10}\n\n"
@@ -139,15 +140,14 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
 
     except Exception as e:
         total_time = time.time() - start_time
-        progress(1.0, desc=f"❌ Error occurred ({total_time:.1f}s)")
+        progress(1.0, desc=f"❌ Error ({total_time:.1f}s)")
         error_msg = f"Error during analysis: {str(e)}"
         return error_msg, history, f"Question: {question}\n\nAnswer: {error_msg}"
 
 def clear_history():
-    """Clear conversation history, image, and output"""
     return None, "", [], ""
 
-# Sample questions
+# ── Sample questions ──────────────────────────────────────────────────────────
 SAMPLE_QUESTIONS = [
     "Describe this medical image. What do you see?",
     "Is this a normal or abnormal scan?",
@@ -161,14 +161,11 @@ SAMPLE_QUESTIONS = [
     "Identify and describe the location of the heart, lungs, and any abnormalities.",
 ]
 
-# Create Gradio interface
-with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
+# ── Gradio UI ─────────────────────────────────────────────────────────────────
+with gr.Blocks(title="🏥 Medical Image Analysis") as demo:
 
-    gr.Markdown("# 🏥 Medical Image Analysis — Powered by Groq AI")
-
-    # Info bar shown at top of UI
+    gr.Markdown("# 🏥 Medical Image Analysis")
     gr.HTML(info_html)
-
     gr.Markdown("""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
 
@@ -179,7 +176,6 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
     ⚠️ **Important:** This is for research purposes only. Not for clinical diagnosis.
     """)
 
-    # Hidden state
     history_state = gr.State([])
     copy_state = gr.State("")
 
@@ -209,7 +205,6 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
                 read_btn = gr.Button("🔊 Read", size="sm", interactive=False)
                 copy_btn = gr.Button("📋 Copy Results", size="sm", interactive=False)
 
-    # Sample questions section
     with gr.Accordion("💡 Sample Questions — click to auto-analyze", open=True):
         sample_btn_rows = []
         for i in range(0, len(SAMPLE_QUESTIONS), 2):
@@ -220,7 +215,6 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
 
     # --- Event wiring ---
 
-    # Analyze button
     submit_btn.click(
         fn=analyze_medical_image,
         inputs=[image_input, question_input, history_state],
@@ -232,25 +226,12 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
         outputs=[copy_btn, read_btn]
     )
 
-    # Enable/disable Analyze button based on image + question
     def update_analyze_button(image, question):
-        has_image = image is not None
-        has_question = len(question.strip()) > 0 if question else False
-        return gr.update(interactive=has_image and has_question)
+        return gr.update(interactive=image is not None and bool(question and question.strip()))
 
-    question_input.change(
-        fn=update_analyze_button,
-        inputs=[image_input, question_input],
-        outputs=submit_btn
-    )
+    question_input.change(fn=update_analyze_button, inputs=[image_input, question_input], outputs=submit_btn)
+    image_input.change(fn=update_analyze_button, inputs=[image_input, question_input], outputs=submit_btn)
 
-    image_input.change(
-        fn=update_analyze_button,
-        inputs=[image_input, question_input],
-        outputs=submit_btn
-    )
-
-    # Clear button
     clear_btn.click(
         fn=clear_history,
         inputs=[],
@@ -260,32 +241,23 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
         outputs=[submit_btn, copy_btn, read_btn]
     )
 
-    # Copy button (JS clipboard)
     copy_btn.click(
-        None,
-        output_text,
-        None,
+        None, output_text, None,
         js="""
         (x) => {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(x);
             } else {
-                const textarea = document.createElement('textarea');
-                textarea.value = x;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
+                const t = document.createElement('textarea');
+                t.value = x; document.body.appendChild(t); t.select();
+                document.execCommand('copy'); document.body.removeChild(t);
             }
         }
         """
     )
 
-    # Read button (Web Speech API toggle)
     read_btn.click(
-        None,
-        output_text,
-        None,
+        None, output_text, None,
         js="""
         (text) => {
             if (!window.speechSynthesis) return;
@@ -293,27 +265,22 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
                 window.speechSynthesis.cancel();
             } else if (text) {
                 const parts = text.split('==========').map(s => s.trim()).filter(s => s.length > 0);
-                const lastConversation = parts[parts.length - 1] || text;
-                const utterance = new SpeechSynthesisUtterance(lastConversation);
+                const utterance = new SpeechSynthesisUtterance(parts[parts.length - 1] || text);
                 window.speechSynthesis.speak(utterance);
             }
         }
         """
     )
 
-    # Sample question buttons — set question then auto-analyze
     for btn, q in sample_btn_rows:
         btn.click(
             fn=lambda question=q: question,
-            inputs=[],
-            outputs=[question_input],
-            queue=False
+            inputs=[], outputs=[question_input], queue=False
         ).then(
             fn=analyze_medical_image,
             inputs=[image_input, question_input, history_state],
             outputs=[output_text, history_state, copy_state],
-            show_progress="full",
-            concurrency_limit=10
+            show_progress="full", concurrency_limit=10
         ).then(
             fn=lambda: [gr.update(interactive=True), gr.update(interactive=True)],
             outputs=[copy_btn, read_btn]
@@ -321,8 +288,4 @@ with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
 
 if __name__ == "__main__":
     demo.queue(default_concurrency_limit=10)
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        inbrowser=True
-    )
+    demo.launch(server_name="0.0.0.0", server_port=7860, inbrowser=True)
