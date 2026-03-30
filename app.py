@@ -36,7 +36,7 @@ if is_hf_space:
             "Go to Settings → Variables and secrets → add GROQ_API_KEY."
         )
     groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    GROQ_MODEL = "llama-4-scout-17b-16e-instruct"
+    GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
     llm_label = f"Groq / {GROQ_MODEL}"
     print(f"✓ Backend: Groq ({GROQ_MODEL})")
 
@@ -273,30 +273,36 @@ with gr.Blocks(title="🏥 Medical Image Analysis", css=CSS) as demo:
         """
     )
 
-    # Read toggle: green (idle/done) → orange (reading), label toggles
+    # Read toggle: green (idle) → orange (reading), label toggles
     read_btn.click(
         None, output_text, None,
         js="""
         (text) => {
-            const btn = document.querySelector('#read-btn button');
-            if (!window.speechSynthesis || !btn) return;
+            if (!window.speechSynthesis) return;
+
+            // Resolve button element — try multiple selectors for Gradio 6 compat
+            const findBtn = () =>
+                document.getElementById('read-btn')?.querySelector('button') ||
+                document.querySelector('#read-btn button');
+
+            const GREEN = '#16a34a', ORANGE = '#f97316';
 
             const setReady = () => {
-                btn.innerHTML = '🔊 Read';
-                btn.style.background = '#16a34a';
-                btn.style.borderColor = '#16a34a';
+                const b = findBtn();
+                if (b) { b.innerHTML = '🔊 Read'; b.style.background = GREEN; b.style.borderColor = GREEN; }
+                window._isReading = false;
             };
             const setReading = () => {
-                btn.innerHTML = '⏹ Stop Reading';
-                btn.style.background = '#f97316';
-                btn.style.borderColor = '#f97316';
+                const b = findBtn();
+                if (b) { b.innerHTML = '⏹ Stop Reading'; b.style.background = ORANGE; b.style.borderColor = ORANGE; }
+                window._isReading = true;
             };
 
-            if (window.speechSynthesis.speaking) {
+            if (window._isReading) {
                 window.speechSynthesis.cancel();
                 setReady();
             } else if (text) {
-                const parts = text.split('==========').map(s => s.trim()).filter(s => s.length > 0);
+                const parts = text.split('==========').map(s => s.trim()).filter(Boolean);
                 const utterance = new SpeechSynthesisUtterance(parts[parts.length - 1] || text);
                 utterance.onend = setReady;
                 utterance.onerror = setReady;
