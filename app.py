@@ -18,9 +18,8 @@ import os
 import time
 import subprocess
 
-# Free port 7860 on local startup only
-if not os.environ.get("SPACE_ID"):
-    subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
+# Free port 7860 on local startup (lsof not available in HF containers)
+subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
 
 # Auto-load HF_TOKEN from file if not already set (local dev)
 if not os.environ.get("HF_TOKEN"):
@@ -352,5 +351,5 @@ if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        ssr_mode=False,
+        inbrowser=True
     )
