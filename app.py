@@ -166,13 +166,13 @@ CSS = """
 button { transition: transform 0.08s, filter 0.08s !important; }
 button:active { transform: scale(0.95) !important; filter: brightness(0.88) !important; }
 
-/* Read button — default green */
+/* Read button — default blue */
 #read-btn button {
-    background: #16a34a !important;
-    border-color: #16a34a !important;
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
     color: white !important;
 }
-#read-btn button:hover { background: #15803d !important; border-color: #15803d !important; }
+#read-btn button:hover { background: #2563eb !important; border-color: #2563eb !important; }
 """
 
 # ── Gradio UI ─────────────────────────────────────────────────────────────────
@@ -285,16 +285,16 @@ with gr.Blocks(title="🏥 Medical Image Analysis", css=CSS) as demo:
                 document.getElementById('read-btn')?.querySelector('button') ||
                 document.querySelector('#read-btn button');
 
-            const GREEN = '#16a34a', ORANGE = '#f97316';
+            const BLUE = '#3b82f6', ORANGE = '#f97316';
 
             const setReady = () => {
                 const b = findBtn();
-                if (b) { b.innerHTML = '🔊 Read'; b.style.background = GREEN; b.style.borderColor = GREEN; }
+                if (b) { b.innerHTML = '🔊 Read'; b.style.background = BLUE; b.style.borderColor = BLUE; }
                 window._isReading = false;
             };
             const setReading = () => {
                 const b = findBtn();
-                if (b) { b.innerHTML = '⏹ Stop Reading'; b.style.background = ORANGE; b.style.borderColor = ORANGE; }
+                if (b) { b.innerHTML = '⏹ Stop'; b.style.background = ORANGE; b.style.borderColor = ORANGE; }
                 window._isReading = true;
             };
 
