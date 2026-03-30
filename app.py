@@ -347,10 +347,10 @@ with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
             outputs=[copy_btn, read_btn]
         )
 
-demo.queue(default_concurrency_limit=10)
-demo.launch(
-    server_name="0.0.0.0",
-    server_port=7860,
-    ssr_mode=False,
-    inbrowser=False,
-)
+if __name__ == "__main__":
+    demo.queue(default_concurrency_limit=10)
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        ssr_mode=False,
+    )
