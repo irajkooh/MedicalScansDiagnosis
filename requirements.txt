@@ -1,8 +1,4 @@
 --prefer-binary
-transformers==4.50.3
-torch>=2.0.0
+groq
+torch
 pillow>=10.0.0
-huggingface_hub>=0.20.0
-accelerate>=0.20.0
-sentencepiece>=0.1.99
-protobuf>=3.20.0

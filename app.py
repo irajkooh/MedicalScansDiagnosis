@@ -4,100 +4,82 @@
 # If running locally:
 """
 clear && lsof -ti:7860 | xargs kill -9 2>/dev/null; fg 2>/dev/null && sleep 0.5 && pkill -9 -f "python app.py" || true
-source .venv/bin/activate && GROQ_API_KEY=YOUR_HF_TOKEN_HERE python app.py
+source .venv/bin/activate && python app.py
 
 App running on: http://localhost:7860
 """
 import gradio as gr
-from transformers import pipeline
 import torch
 from PIL import Image
 from pathlib import Path
-from huggingface_hub import snapshot_download
 import os
 import time
+import base64
+from io import BytesIO
 import subprocess
+from groq import Groq
 
 # Free port 7860 on local startup (lsof not available in HF containers)
 subprocess.run("lsof -ti:7860 | xargs kill -9 2>/dev/null || true", shell=True)
 
-# Auto-load HF_TOKEN from file if not already set (local dev)
-if not os.environ.get("HF_TOKEN"):
-    hf_token_file = Path(__file__).parent / ".HF_token.txt"
-    if hf_token_file.exists():
-        os.environ["HF_TOKEN"] = hf_token_file.read_text().strip()
+# Auto-load GROQ_API_KEY from file if not already set (local dev)
+if not os.environ.get("GROQ_API_KEY"):
+    groq_key_file = Path(__file__).parent / ".GROQ_API_KEY.txt"
+    if groq_key_file.exists():
+        for line in groq_key_file.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("gsk_"):
+                os.environ["GROQ_API_KEY"] = line
+                break
 
-# HF token for downloading gated model
-hf_token = os.environ.get("HF_TOKEN")
+groq_api_key = os.environ.get("GROQ_API_KEY")
 
-if not hf_token:
+if not groq_api_key:
     raise ValueError(
-        "HF_TOKEN environment variable not found!\n"
-        "Please add your Hugging Face token as a secret in Space settings:\n"
+        "GROQ_API_KEY environment variable not found!\n"
+        "Please add your Groq API key as a secret in Space settings:\n"
         "1. Go to Settings tab\n"
         "2. Navigate to 'Variables and secrets'\n"
-        "3. Add HF_TOKEN with your token value from https://huggingface.co/settings/tokens"
+        "3. Add GROQ_API_KEY with your key from https://console.groq.com/keys"
     )
 
-print(f"✓ HF_TOKEN found (length: {len(hf_token)})")
+print(f"✓ GROQ_API_KEY found (length: {len(groq_api_key)})")
 
-# Load model function
-def load_model():
-    model_dir = Path("./models/medgemma-1.5-4b-it")
+# Initialize Groq client and model
+client = Groq(api_key=groq_api_key)
+GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
 
-    # Check if model exists locally
-    model_exists = (
-        model_dir.exists()
-        and any(model_dir.glob("*.safetensors"))
-        and (model_dir / "tokenizer_config.json").exists()
-    )
-
-    if model_exists:
-        model_path = str(model_dir)
-        print(f"Loading model from {model_path}")
+# Detect available device
+def get_device_info():
+    if torch.cuda.is_available():
+        device_name = torch.cuda.get_device_name(0)
+        return f"CUDA — {device_name}"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "MPS (Apple Silicon)"
     else:
-        print("Downloading model from Hugging Face Hub...")
-        model_dir.parent.mkdir(exist_ok=True)
-        model_path = snapshot_download(
-            repo_id="google/medgemma-1.5-4b-it",
-            local_dir=str(model_dir),
-            local_dir_use_symlinks=False,
-            token=hf_token,
-        )
-        print(f"Model downloaded to {model_path}")
-
-    # Load pipeline
-    print("Loading pipeline...")
-    pipe = pipeline(
-        "image-text-to-text",
-        model=model_path,
-        dtype=torch.bfloat16,
-        device_map="auto",
-        token=hf_token,
-        trust_remote_code=True,
-    )
-    print(f"Model loaded successfully on {pipe.device}")
-
-    return pipe
-
-# Load model on startup
-print("Initializing model...")
-pipe = load_model()
+        return "CPU"
 
 # Environment info
 is_hf_space = os.environ.get("SPACE_ID") is not None
 running_on = "HuggingFace Space" if is_hf_space else "Local"
-device_name = str(pipe.device)
-model_name = "google/medgemma-1.5-4b-it"
+device_name = get_device_info()
+
+print(f"✓ Running on: {running_on}, Device: {device_name}, Model: {GROQ_MODEL}")
 
 info_html = f"""
 <div style="background:#eff6ff;border:1px solid #3b82f6;border-radius:8px;padding:10px 18px;
             color:#1d4ed8;font-size:14px;display:flex;gap:32px;flex-wrap:wrap;margin-bottom:4px;">
   <span>🖥️ <b>Running:</b> {running_on}</span>
   <span>⚡ <b>Device:</b> {device_name}</span>
-  <span>🧠 <b>LLM:</b> {model_name}</span>
+  <span>🧠 <b>LLM:</b> Groq / {GROQ_MODEL}</span>
 </div>
 """
+
+def image_to_base64(img: Image.Image) -> str:
+    """Convert PIL image to base64 PNG string."""
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
 def analyze_medical_image(image, question, history, progress=gr.Progress()):
     """Analyze medical image with custom question and conversation history"""
@@ -106,65 +88,55 @@ def analyze_medical_image(image, question, history, progress=gr.Progress()):
 
     start_time = time.time()
 
-    progress(0.1, desc="🔍 Step 1/10: Starting analysis...")
+    progress(0.2, desc="📷 Encoding image...")
 
-    progress(0.2, desc="📷 Step 2/10: Loading medical image...")
+    img_b64 = image_to_base64(image)
 
-    # Create messages with conversation history
-    progress(0.3, desc="📝 Step 3/10: Preparing prompt...")
+    progress(0.4, desc="🧠 Sending to Groq AI...")
+
+    # Build messages: prior turns are text-only, current turn includes image
     messages = []
-
-    # Add conversation history
     for prev_q, prev_a in history:
-        messages.append({
-            "role": "user",
-            "content": [{"type": "text", "text": prev_q}]
-        })
-        messages.append({
-            "role": "assistant",
-            "content": [{"type": "text", "text": prev_a}]
-        })
+        messages.append({"role": "user", "content": prev_q})
+        messages.append({"role": "assistant", "content": prev_a})
 
-    # Add current question with image
     messages.append({
         "role": "user",
         "content": [
-            {"type": "image", "image": image},
-            {"type": "text", "text": question}
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{img_b64}"}
+            },
+            {
+                "type": "text",
+                "text": question
+            }
         ]
     })
 
-    progress(0.4, desc="🤖 Step 4/10: Initializing AI model...")
-
-    progress(0.5, desc="🧠 Step 5/10: Processing with MedGemma AI...")
-
-    # Run inference
     try:
-        output = pipe(text=messages, max_new_tokens=500)
+        response = client.chat.completions.create(
+            model=GROQ_MODEL,
+            messages=messages,
+            max_tokens=500
+        )
 
-        progress(0.6, desc="🔬 Step 6/10: Analyzing results...")
-        progress(0.7, desc="📊 Step 7/10: Extracting findings...")
-        result = output[0]["generated_text"][-1]["content"]  # type: ignore
+        progress(0.9, desc="📋 Formatting output...")
 
-        progress(0.8, desc="📋 Step 8/10: Formatting output...")
-        progress(0.9, desc="✨ Step 9/10: Finalizing report...")
-
-        # Calculate total time
+        result = response.choices[0].message.content
         total_time = time.time() - start_time
 
-        progress(1.0, desc=f"✅ Step 10/10: Complete! ({total_time:.1f}s)")
+        progress(1.0, desc=f"✅ Complete! ({total_time:.1f}s)")
 
-        # Update history
         new_history = history + [[question, result]]
 
-        # Build full output with all conversations
         full_output = ""
         for q, a in new_history:
             full_output += f"Question: {q}\n\nAnswer: {a}\n\n{'='*10}\n\n"
 
         copy_text = full_output.strip()
-
         return full_output.strip(), new_history, copy_text
+
     except Exception as e:
         total_time = time.time() - start_time
         progress(1.0, desc=f"❌ Error occurred ({total_time:.1f}s)")
@@ -190,12 +162,13 @@ SAMPLE_QUESTIONS = [
 ]
 
 # Create Gradio interface
-with gr.Blocks(title="🏥 MedGemma 1.5: Medical Image Analysis") as demo:
+with gr.Blocks(title="🏥 Medical Image Analysis — Groq AI") as demo:
 
-    gr.Markdown("# 🏥 MedGemma 1.5: Medical Image Analysis")
+    gr.Markdown("# 🏥 Medical Image Analysis — Powered by Groq AI")
 
-    # Info bar
+    # Info bar shown at top of UI
     gr.HTML(info_html)
+
     gr.Markdown("""
     Upload a medical image (X-ray, CT, MRI) and ask questions about it.
 
