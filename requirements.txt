@@ -1,5 +1,5 @@
 --prefer-binary
-transformers>=4.50.0
+transformers==4.50.3
 torch>=2.0.0
 pillow>=10.0.0
 huggingface_hub>=0.20.0
