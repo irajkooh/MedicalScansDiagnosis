@@ -44,5 +44,8 @@ _*.jpg
 *_.py
 _HowToDeployToHFSpace.md
 
+# Secrets / local-only docs (API keys, tokens, deploy notes)
+_secrets/
+
 # Notebook files with potential secrets
 *.ipynb
